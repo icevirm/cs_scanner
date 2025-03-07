@@ -40,7 +40,7 @@ def check_sse_c_allowed(bucket: str) -> bool:
         'SSECustomerKeyMD5': b64encode(md5(encryption_key).digest()).decode('utf-8')
     }
 
-    with open('example.txt', 'rb') as data:
+    with open('aws/files/example.txt', 'rb') as data:
         try:
             s3.put_object(
                 Bucket=bucket,

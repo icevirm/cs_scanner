@@ -1,5 +1,5 @@
 from boto3 import client as boto_client
-from encryption import encryption_configuration
+from . import encryption
 
 s3 = boto_client('s3')
 
@@ -25,4 +25,4 @@ def evaluate_s3_security() -> None:
     buckets = list_buckets()
     print(f'Existing S3 buckets: {buckets}')
 
-    encryption_configuration(buckets)
+    encryption.encryption_configuration(buckets)
