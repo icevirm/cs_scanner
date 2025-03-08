@@ -15,14 +15,18 @@ def list_buckets() -> list:
 
     return buckets
 
-def evaluate_s3_security() -> None:
+def evaluate_s3_security(enc: bool) -> None:
     '''
     Runs different security checks on S3 buckets in the account and reports the results
 
-    Args: None
+    Args:
+        (bool) encryption - scan encryption settings
     Returns: None
     '''
     buckets = list_buckets()
     print(f'Existing S3 buckets: {buckets}')
 
-    encryption.encryption_configuration(buckets)
+    if enc:
+        encryption.encryption_configuration(buckets)
+    else:
+        pass
