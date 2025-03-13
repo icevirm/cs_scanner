@@ -1,8 +1,6 @@
 import boto3
-import pytest
 from json import dumps
 from moto import mock_aws
-from botocore.exceptions import ClientError
 from aws.encryption import get_bucket_encryption, check_sse_c_allowed, check_tls_enforced
 
 
