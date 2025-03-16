@@ -3,6 +3,11 @@ from botocore import exceptions
 from boto3 import client as boto_client
 from hashlib import md5
 from json import loads
+from tqdm import tqdm
+from rich.console import Console
+from rich.table import Table
+
+console = Console()
 
 s3 = boto_client('s3')
 
@@ -42,7 +47,7 @@ def check_sse_c_allowed(bucket: str) -> bool:
 
     with open('aws/files/example.txt', 'rb') as data:
         try:
-            s3.put_object(
+            response = s3.put_object(
                 Bucket=bucket,
                 Key=object_key,
                 Body=data,
@@ -53,7 +58,7 @@ def check_sse_c_allowed(bucket: str) -> bool:
         except s3.exceptions.ClientError as e:
             if 'explicit deny in a resource-based policy' in str(e):
                 sse_c_status = False
-                return
+                return sse_c_status
 
     try:
         s3.get_object(Bucket=bucket, Key=object_key)
@@ -61,17 +66,18 @@ def check_sse_c_allowed(bucket: str) -> bool:
     except s3.exceptions.ClientError as e:
         if 'SSECustomerKey' in str(e) or 'InvalidRequest' in str(e):
             sse_c_status = True
+            return sse_c_status
         else:
             print(f'Other error: {e}')
 
     try:
         s3.get_object(
-        Bucket=bucket,
-        Key=object_key,
-        SSECustomerAlgorithm='AES256',
-        SSECustomerKey=b64encode(encryption_key).decode('utf-8'),
-        SSECustomerKeyMD5=b64encode(md5(encryption_key).digest()).decode('utf-8')
-    )
+            Bucket=bucket,
+            Key=object_key,
+            SSECustomerAlgorithm='AES256',
+            SSECustomerKey=b64encode(encryption_key).decode('utf-8'),
+            SSECustomerKeyMD5=b64encode(md5(encryption_key).digest()).decode('utf-8')
+        )
     except:
         print('Something went wrong with getting object')
 
@@ -111,7 +117,14 @@ def encryption_configuration(buckets: list) -> None:
     Args: (list) buckets - list of S3 buckets in the current account
     Returns: None
     '''
-    for bucket in buckets:
+    table = Table(title="S3 Bucket Security Scan Results")
+    table.add_column("Bucket Name", style="cyan", justify="left")
+    table.add_column("Encryption Algorythm", style="magenta", justify="center")
+    table.add_column("Encryption Key", style="magenta", justify="center")
+    table.add_column("TLS Enforced", style="green", justify="center")
+    table.add_column("SSE-C Blocked", style="green", justify="center")
+
+    for bucket in tqdm(buckets, desc="Scanning Buckets", unit="bucket"):
         encryption = get_bucket_encryption(bucket)
         encryption_algorythm = encryption['SSEAlgorithm']
         if encryption_algorythm == 'AES256':
@@ -122,18 +135,12 @@ def encryption_configuration(buckets: list) -> None:
         sse_c_status = check_sse_c_allowed(bucket)
         tls_status = check_tls_enforced(bucket)
 
-
-        print(f'\nConfiguration of the bucket {bucket}:')
-        print('-' * 50)
-        print(f'Encryption Algorythm: {encryption_algorythm}')
-        print(f'KMS key: {encryption_key}')
+        table.add_row(
+            bucket,
+            encryption_algorythm,
+            encryption_key,
+            "✅" if tls_status else "❌",
+            "❌" if sse_c_status else "✅"
+        )
         
-        if sse_c_status:
-            print('SSE-C is allowed')
-        else:
-            print('SSE-C is not allowed')
-
-        if tls_status:
-            print('TLS is enforced')
-        else:
-            print('TLS is not enforced')
+    console.print(table)
