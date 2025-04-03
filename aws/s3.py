@@ -20,7 +20,7 @@ def evaluate_s3_security(enc: bool) -> None:
     Runs different security checks on S3 buckets in the account and reports the results
 
     Args:
-        (bool) encryption - scan encryption settings
+        (bool) enc - scan encryption settings
     Returns: None
     '''
     buckets = list_buckets()

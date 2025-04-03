@@ -110,7 +110,7 @@ def check_tls_enforced(bucket: str) -> bool:
 def encryption_configuration(buckets: list) -> None:
     '''
     Scans encryption configuration settings on S3 buckets in the current account.
-    Gets the encryption algorythm applied to the bucket.
+    Gets the encryption algorithm applied to the bucket.
     Checks if SSE-C is allowed.
     Checks if TLS is enforced in the bucket policy.
 
@@ -126,8 +126,8 @@ def encryption_configuration(buckets: list) -> None:
 
     for bucket in tqdm(buckets, desc="Scanning Buckets", unit="bucket"):
         encryption = get_bucket_encryption(bucket)
-        encryption_algorythm = encryption['SSEAlgorithm']
-        if encryption_algorythm == 'AES256':
+        encryption_algorithm = encryption['SSEAlgorithm']
+        if encryption_algorithm == 'AES256':
             key = 'S3 managed'
         else:
             key = 'KMS managed'
@@ -137,7 +137,7 @@ def encryption_configuration(buckets: list) -> None:
 
         table.add_row(
             bucket,
-            encryption_algorythm,
+            encryption_algorithm,
             encryption_key,
             "✅" if tls_status else "❌",
             "❌" if sse_c_status else "✅"
