@@ -1,4 +1,4 @@
-name: Run Tests
+name: Run AWS Tests
 
 on:
   push:
@@ -19,13 +19,13 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install dependencies
+      - name: Install AWS dependencies
         run: |
           python -m venv .venv
           source .venv/bin/activate
           pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -r requirements-test.txt
+          pip install -r requirements-aws.txt
+          pip install -r requirements-aws-test.txt
           pip install -e .
 
       - name: Run tests
