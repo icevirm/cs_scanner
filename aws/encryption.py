@@ -2,14 +2,11 @@ from base64 import b64encode
 from botocore import exceptions
 from boto3 import client as boto_client
 from hashlib import md5
+from .helpers import parse_arn
 from json import loads
-from tqdm import tqdm
-from rich.console import Console
-from rich.table import Table
-
-console = Console()
 
 s3 = boto_client('s3')
+kms = boto_client('kms')
 
 
 def get_bucket_encryption(bucket: str) -> dict:
@@ -47,7 +44,7 @@ def check_sse_c_allowed(bucket: str) -> bool:
 
     with open('aws/files/example.txt', 'rb') as data:
         try:
-            response = s3.put_object(
+            s3.put_object(
                 Bucket=bucket,
                 Key=object_key,
                 Body=data,
@@ -107,40 +104,22 @@ def check_tls_enforced(bucket: str) -> bool:
     return False
 
 
-def encryption_configuration(buckets: list) -> None:
+def get_bucket_location(bucket: str) -> str:
     '''
-    Scans encryption configuration settings on S3 buckets in the current account.
-    Gets the encryption algorithm applied to the bucket.
-    Checks if SSE-C is allowed.
-    Checks if TLS is enforced in the bucket policy.
+    Gets region where the bucket is located.
 
-    Args: (list) buckets - list of S3 buckets in the current account
-    Returns: None
+    Args: (str) bucket - the name of the bucket to scan
+    Returns: (str) location - The bucket's region
     '''
-    table = Table(title="S3 Bucket Security Scan Results")
-    table.add_column("Bucket Name", style="cyan", justify="left")
-    table.add_column("Encryption Algorythm", style="magenta", justify="center")
-    table.add_column("Encryption Key", style="magenta", justify="center")
-    table.add_column("TLS Enforced", style="green", justify="center")
-    table.add_column("SSE-C Blocked", style="green", justify="center")
+    location = s3.get_bucket_location(Bucket=bucket)
 
-    for bucket in tqdm(buckets, desc="Scanning Buckets", unit="bucket"):
-        encryption = get_bucket_encryption(bucket)
-        encryption_algorithm = encryption['SSEAlgorithm']
-        if encryption_algorithm == 'AES256':
-            key = 'S3 managed'
-        else:
-            key = 'KMS managed'
-        encryption_key = encryption.get('KMSMasterKeyID', key)
-        sse_c_status = check_sse_c_allowed(bucket)
-        tls_status = check_tls_enforced(bucket)
+    return location['LocationConstraint']
 
-        table.add_row(
-            bucket,
-            encryption_algorithm,
-            encryption_key,
-            "✅" if tls_status else "❌",
-            "❌" if sse_c_status else "✅"
-        )
-        
-    console.print(table)
+def get_key_location(encryption_key: str) -> str:
+    '''
+    Parses key location from key ARN
+
+    Args: (str) encryption_key - ARN of the encryption key
+    Returns: (str) - region part of the ARN
+    '''
+    return parse_arn(encryption_key)[3]

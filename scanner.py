@@ -12,13 +12,18 @@ def main() -> None:
     parser.add_argument('-a', '--aws', action='store_true', help='AWS resources')
     parser.add_argument('-g', '--gcp', action='store_true', help='GCP resources')
     parser.add_argument('-e', '--encryption', action='store_true', help='Scan encryption settings')
+    parser.add_argument('-p', '--public', action='store_true', help='Scan public access settings')
     args = parser.parse_args()
 
     if args.aws:
-        if args.encryption:
-            s3.evaluate_s3_security(enc=True)
+        if args.encryption and args.public:
+            s3.evaluate_s3_security(enc=True, pub=True)
+        elif args.encryption:
+            s3.evaluate_s3_security(enc=True, pub=False)
+        elif args.public:
+            s3.evaluate_s3_security(enc=False, pub=True)
         else:
-            s3.evaluate_s3_security(enc=False)
+            s3.evaluate_s3_security(enc=False, pub=False)
     elif args.gcp:
         if args.encryption:
             storage.evaluate_storage_security(enc=True)

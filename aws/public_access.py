@@ -1,0 +1,1 @@
+# This module checks if public access is allowed
