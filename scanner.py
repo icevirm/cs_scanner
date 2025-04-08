@@ -16,19 +16,9 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.aws:
-        if args.encryption and args.public:
-            s3.evaluate_s3_security(enc=True, pub=True)
-        elif args.encryption:
-            s3.evaluate_s3_security(enc=True, pub=False)
-        elif args.public:
-            s3.evaluate_s3_security(enc=False, pub=True)
-        else:
-            s3.evaluate_s3_security(enc=False, pub=False)
+        s3.evaluate_s3_security(enc=args.encryption, pub=args.public)
     elif args.gcp:
-        if args.encryption:
-            storage.evaluate_storage_security(enc=True)
-        else:
-            storage.evaluate_storage_security(enc=False)
+        storage.evaluate_storage_security(enc=args.encryption)
     else:
         print('Choose at least one cloud provider.')
 

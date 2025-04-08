@@ -32,6 +32,7 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: "fake"
           AWS_SECRET_ACCESS_KEY: "fake"
+          AWS_DEFAULT_REGION: "eu-central-1"
         run: |
           env | grep AWS
           aws sts get-caller-identity || echo "No credentials available"
