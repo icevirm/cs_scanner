@@ -8,7 +8,12 @@ from aws.encryption import get_bucket_encryption, check_sse_c_allowed, check_tls
 def test_get_bucket_encryption():
     s3 = boto3.client("s3")
     bucket_name = "test-bucket"
-    s3.create_bucket(Bucket=bucket_name)
+    s3.create_bucket(
+        Bucket=bucket_name,
+        CreateBucketConfiguration={
+            'LocationConstraint': 'eu-central-1'
+        }
+    )
     encryption_config = {
         "Rules": [
             {
@@ -28,7 +33,12 @@ def test_get_bucket_encryption():
 def test_get_bucket_encryption_no_config():
     s3 = boto3.client("s3")
     bucket_name = "test-bucket"
-    s3.create_bucket(Bucket=bucket_name)
+    s3.create_bucket(
+        Bucket=bucket_name,
+        CreateBucketConfiguration={
+            'LocationConstraint': 'eu-central-1'
+        }
+    )
     
     result = get_bucket_encryption(bucket_name)
     assert result is None
@@ -38,7 +48,12 @@ def test_get_bucket_encryption_no_config():
 def test_check_sse_c_allowed():
     s3 = boto3.client("s3")
     bucket_name = "test-bucket"
-    s3.create_bucket(Bucket=bucket_name)
+    s3.create_bucket(
+        Bucket=bucket_name,
+        CreateBucketConfiguration={
+            'LocationConstraint': 'eu-central-1'
+        }
+    )
     
     result = check_sse_c_allowed(bucket_name)
     assert result is False  # Because moto does not support SSE-C
@@ -48,7 +63,12 @@ def test_check_sse_c_allowed():
 def test_check_tls_enforced():
     s3 = boto3.client("s3")
     bucket_name = "test-bucket"
-    s3.create_bucket(Bucket=bucket_name)
+    s3.create_bucket(
+        Bucket=bucket_name,
+        CreateBucketConfiguration={
+            'LocationConstraint': 'eu-central-1'
+        }
+    )
     bucket_policy = {
         "Version": "2012-10-17",
         "Statement": [
@@ -72,6 +92,11 @@ def test_check_tls_enforced():
 def test_check_tls_not_enforced():
     s3 = boto3.client("s3")
     bucket_name = "test-bucket"
-    s3.create_bucket(Bucket=bucket_name)
+    s3.create_bucket(
+        Bucket=bucket_name,
+        CreateBucketConfiguration={
+            'LocationConstraint': 'eu-central-1'
+        }
+    )
     
     assert check_tls_enforced(bucket_name) is False
