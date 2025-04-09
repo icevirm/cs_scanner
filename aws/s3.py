@@ -4,6 +4,7 @@ from rich.console import Console
 from rich.table import Table
 
 from . import encryption as s3_encryption
+from . import public_access as s3_public
 
 s3 = boto_client('s3')
 
@@ -63,9 +64,17 @@ def evaluate_s3_encryption(buckets: list, table: Table):
     return table
 
 
-def s3_public():
-    pass
+def evaluate_s3_public_access(buckets, table):
+    for bucket in tqdm(buckets, desc='Scanning Buckets', unit='bucket'):
+        public = s3_public.get_bucket_public_configuration(bucket)
+
+        print(public)
         
+        table.add_row(
+            '✅' if public else '❌',
+        )
+
+    return table 
 
 def evaluate_s3_security(enc: bool, pub: bool) -> None:
     '''
@@ -87,11 +96,12 @@ def evaluate_s3_security(enc: bool, pub: bool) -> None:
     table.add_column('Key Location', style='magenta', justify='center')
     table.add_column('TLS Enforced', style='green', justify='center')
     table.add_column('SSE-C Blocked', style='green', justify='center')
+    table.add_column('Public Access', style='green', justify='center')
 
     if enc:
         table = evaluate_s3_encryption(buckets, table)
     
     if pub:
-        table = s3_public(buckets, table)
+        table = evaluate_s3_public_access(buckets, table)
 
     console.print(table)
