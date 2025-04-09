@@ -1,17 +1,19 @@
-import boto3
+from boto3 import client
 from json import dumps
 from moto import mock_aws
-from aws.encryption import get_bucket_encryption, check_sse_c_allowed, check_tls_enforced
+from aws.encryption import get_bucket_encryption, check_sse_c_allowed, check_tls_enforced, get_bucket_location, get_key_location
+
+DEFAULT_REGION = 'eu-central-1'
 
 
 @mock_aws
 def test_get_bucket_encryption():
-    s3 = boto3.client("s3")
+    s3 = client("s3")
     bucket_name = "test-bucket"
     s3.create_bucket(
         Bucket=bucket_name,
         CreateBucketConfiguration={
-            'LocationConstraint': 'eu-central-1'
+            'LocationConstraint': DEFAULT_REGION
         }
     )
     encryption_config = {
@@ -31,12 +33,12 @@ def test_get_bucket_encryption():
 
 @mock_aws
 def test_get_bucket_encryption_no_config():
-    s3 = boto3.client("s3")
+    s3 = client("s3")
     bucket_name = "test-bucket"
     s3.create_bucket(
         Bucket=bucket_name,
         CreateBucketConfiguration={
-            'LocationConstraint': 'eu-central-1'
+            'LocationConstraint': DEFAULT_REGION
         }
     )
     
@@ -46,12 +48,12 @@ def test_get_bucket_encryption_no_config():
 
 @mock_aws
 def test_check_sse_c_allowed():
-    s3 = boto3.client("s3")
+    s3 = client("s3")
     bucket_name = "test-bucket"
     s3.create_bucket(
         Bucket=bucket_name,
         CreateBucketConfiguration={
-            'LocationConstraint': 'eu-central-1'
+            'LocationConstraint': DEFAULT_REGION
         }
     )
     
@@ -61,12 +63,12 @@ def test_check_sse_c_allowed():
 
 @mock_aws
 def test_check_tls_enforced():
-    s3 = boto3.client("s3")
+    s3 = client("s3")
     bucket_name = "test-bucket"
     s3.create_bucket(
         Bucket=bucket_name,
         CreateBucketConfiguration={
-            'LocationConstraint': 'eu-central-1'
+            'LocationConstraint': DEFAULT_REGION
         }
     )
     bucket_policy = {
@@ -90,13 +92,59 @@ def test_check_tls_enforced():
 
 @mock_aws
 def test_check_tls_not_enforced():
-    s3 = boto3.client("s3")
+    s3 = client("s3")
     bucket_name = "test-bucket"
     s3.create_bucket(
         Bucket=bucket_name,
         CreateBucketConfiguration={
-            'LocationConstraint': 'eu-central-1'
+            'LocationConstraint': DEFAULT_REGION
         }
     )
     
     assert check_tls_enforced(bucket_name) is False
+
+
+@mock_aws
+def test_get_bucket_location():
+    s3 = client("s3")
+    bucket_name = "test-bucket"
+    s3.create_bucket(
+        Bucket=bucket_name,
+        CreateBucketConfiguration={
+            'LocationConstraint': DEFAULT_REGION
+        }
+    )
+
+    assert get_bucket_location(bucket_name) == DEFAULT_REGION
+
+
+@mock_aws
+def test_get_key_location():
+    s3 = client("s3")
+    bucket_name = "test-bucket"
+    s3.create_bucket(
+        Bucket=bucket_name,
+        CreateBucketConfiguration={
+            'LocationConstraint': DEFAULT_REGION
+        }
+    )
+    encryption_config = {
+        "Rules": [
+            {
+                "ApplyServerSideEncryptionByDefault": {
+                    "SSEAlgorithm": "dsse:kms"
+                }
+            }
+        ]
+    }
+    s3.put_bucket_encryption(Bucket=bucket_name, ServerSideEncryptionConfiguration=encryption_config)
+
+    encryption = get_bucket_encryption(bucket_name)
+    if 'KMSMasterKeyID' in encryption:
+        encryption_key = encryption['KMSMasterKeyID']
+        key_location = get_key_location(encryption_key)
+    else:
+        bucket_location = get_bucket_location(bucket_name)
+        key_location = bucket_location
+
+    assert key_location == DEFAULT_REGION
