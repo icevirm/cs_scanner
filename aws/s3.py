@@ -23,71 +23,59 @@ def list_buckets() -> list:
     return buckets
 
 
-def evaluate_s3_encryption(buckets: list, table: Table):
+def evaluate_s3_encryption(bucket: str):
     '''
-    Outputs information about S3 buckets encryption settings
+    Outputs information about S3 bucket encryption settings
 
-    Args: (list) buckets - list of S3 buckets in the current account
-          (rich.Table) - rich table to be filled in with data
-    Returns: (rich.Table) - updated table
+    Args: (str) bucket - name of S3 bucket to be scanned
+    Returns: (dict) - encryption settings for the bucket
     '''
-    for bucket in tqdm(buckets, desc='Scanning Buckets', unit='bucket'):
-        encryption = s3_encryption.get_bucket_encryption(bucket)
-        encryption_algorithm = encryption['SSEAlgorithm']
+    encryption = s3_encryption.get_bucket_encryption(bucket)
+    encryption_algorithm = encryption['SSEAlgorithm']
 
-        if encryption_algorithm == 'AES256':
-            key = 'S3 managed'
-        else:
-            key = 'KMS managed'
+    if encryption_algorithm == 'AES256':
+        key = 'S3 managed'
+    else:
+        key = 'KMS managed'
 
-        sse_c_status = s3_encryption.check_sse_c_allowed(bucket)
-        tls_status = s3_encryption.check_tls_enforced(bucket)
-        bucket_location = s3_encryption.get_bucket_location(bucket)
+    sse_c_status = s3_encryption.check_sse_c_allowed(bucket)
+    tls_status = s3_encryption.check_tls_enforced(bucket)
+    bucket_location = s3_encryption.get_bucket_location(bucket)
 
-        if 'KMSMasterKeyID' in encryption:
-            encryption_key = encryption['KMSMasterKeyID']
-            key_location = s3_encryption.get_key_location(encryption_key)
-        else:
-            encryption_key = key
-            key_location = bucket_location
+    if 'KMSMasterKeyID' in encryption:
+        encryption_key = encryption['KMSMasterKeyID']
+        key_location = s3_encryption.get_key_location(encryption_key)
+    else:
+        encryption_key = key
+        key_location = bucket_location
 
-        table.add_row(
-            bucket,
-            f'{bucket_location}: ✅' if bucket_location.startswith('eu-') else '❌',
-            encryption_algorithm,
-            encryption_key,
-            f'{key_location}: ✅' if key_location.startswith('eu-') else '❌',
-            '✅' if tls_status else '❌',
-            '❌' if sse_c_status else '✅',
-        )
-
-    return table
+    return {
+        'BucketLocation': bucket_location,
+        'Algorithm': encryption_algorithm,
+        'Key': encryption_key,
+        'KeyLocation': key_location,
+        'TLS': tls_status,
+        'SSE-C': sse_c_status
+    }
 
 
-def evaluate_s3_public_access(buckets, table):
-    for bucket in tqdm(buckets, desc='Scanning Buckets', unit='bucket'):
-        public = s3_public.get_bucket_public_configuration(bucket)
-
-        print(public)
-        
-        table.add_row(
-            '✅' if public else '❌',
-        )
-
-    return table 
-
-def evaluate_s3_security(enc: bool, pub: bool) -> None:
+def evaluate_s3_public_access(bucket: str):
     '''
-    Runs different security checks on S3 buckets in the account and reports the results
+    Output information about S3 Public Access Block settings
 
-    Args:
-        (bool) enc - scan encryption settings
-        (bool) pub - scan public access settings
-    Returns: None
+    Args: (str) bucket - name of S3 bucket to be scanned
+    Returns: (dict) - status of public access block settings
     '''
-    buckets = list_buckets()
-    print(f'Existing S3 buckets: {buckets}')
+    return {
+        'PublicAccess': s3_public.get_bucket_public_configuration(bucket)
+    }
 
+
+def output_json(enc, pub):
+    pass
+
+
+def output_table(buckets, enc, pub):
     table = Table(title='S3 Bucket Security Scan Results')
     table.add_column('Bucket Name', style='cyan', justify='left')
     table.add_column('Bucket Location', style='magenta', justify='center')
@@ -98,10 +86,66 @@ def evaluate_s3_security(enc: bool, pub: bool) -> None:
     table.add_column('SSE-C Blocked', style='green', justify='center')
     table.add_column('Public Access', style='green', justify='center')
 
-    if enc:
-        table = evaluate_s3_encryption(buckets, table)
-    
-    if pub:
-        table = evaluate_s3_public_access(buckets, table)
+    bucket_encryption = {}
+    public_access = {}
+    for bucket in tqdm(buckets, desc='Scanning Buckets', unit='bucket'):
+        if enc:
+            bucket_encryption[bucket] = evaluate_s3_encryption(bucket)
+        if pub:
+            public_access[bucket] = evaluate_s3_public_access(bucket)
+
+    for bucket in buckets:
+        key_location = bucket_encryption.get(bucket, {}).get('KeyLocation', '')
+        if key_location.startswith('eu-'):
+            key_location = f'{key_location}: ✅'
+        elif enc and not key_location.startswith('eu-'):
+            key_location = '❌'
+
+        tls_status = bucket_encryption.get(bucket, {}).get('TLS', '')
+        if tls_status:
+            tls_status = '✅'
+        elif enc and not tls_status:
+            tls_status = ''
+
+        sse_c_status = bucket_encryption.get(bucket, {}).get('SSE-C', '')
+        if sse_c_status:
+            sse_c_status = '❌'
+        elif enc and not sse_c_status:
+            sse_c_status = '✅'
+
+        public_access_status = public_access.get(bucket, {}).get('PublicAccess', '')
+        if public_access_status:
+            public_access_status = f'✅'
+        elif pub and public_access_status:
+            public_access_status = '❌'
+
+        table.add_row(
+            bucket,
+            bucket_encryption.get(bucket, {}).get('BucketLocation'),
+            bucket_encryption.get(bucket, {}).get('Algorithm'),
+            bucket_encryption.get(bucket, {}).get('Key'),
+            key_location,
+            tls_status,
+            sse_c_status,
+            public_access_status
+        )
 
     console.print(table)
+
+
+def evaluate_s3_security(enc: bool, pub: bool, json: bool) -> None:
+    '''
+    Runs different security checks on S3 buckets in the account and reports the results
+
+    Args:
+        (bool) enc - scan encryption settings
+        (bool) pub - scan public access settings
+        (bool) json - output in JSON format
+    Returns: None
+    '''
+    buckets = list_buckets()
+
+    if json:
+        output_json(buckets, enc, pub)
+    else:
+        output_table(buckets, enc, pub)

@@ -7,4 +7,8 @@ def get_bucket_public_configuration(bucket):
         Bucket=bucket
     )
 
-    return public_access_block['PublicAccessBlockConfiguration']
+    for block in public_access_block['PublicAccessBlockConfiguration'].values():
+        if not block:
+            return False
+          
+    return True

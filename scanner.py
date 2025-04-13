@@ -13,10 +13,11 @@ def main() -> None:
     parser.add_argument('-g', '--gcp', action='store_true', help='GCP resources')
     parser.add_argument('-e', '--encryption', action='store_true', help='Scan encryption settings')
     parser.add_argument('-p', '--public', action='store_true', help='Scan public access settings')
+    parser.add_argument('--json', action='store_true', help='Output in json')
     args = parser.parse_args()
 
     if args.aws:
-        s3.evaluate_s3_security(enc=args.encryption, pub=args.public)
+        s3.evaluate_s3_security(enc=args.encryption, pub=args.public, json=args.json)
     elif args.gcp:
         storage.evaluate_storage_security(enc=args.encryption)
     else:
