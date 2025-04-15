@@ -8,8 +8,8 @@ DEFAULT_REGION = 'eu-central-1'
 
 @mock_aws
 def test_get_bucket_encryption():
-    s3 = client("s3")
-    bucket_name = "test-bucket"
+    s3 = client('s3')
+    bucket_name = 'test-bucket'
     s3.create_bucket(
         Bucket=bucket_name,
         CreateBucketConfiguration={
@@ -17,10 +17,10 @@ def test_get_bucket_encryption():
         }
     )
     encryption_config = {
-        "Rules": [
+        'Rules': [
             {
-                "ApplyServerSideEncryptionByDefault": {
-                    "SSEAlgorithm": "AES256"
+                'ApplyServerSideEncryptionByDefault': {
+                    'SSEAlgorithm': 'AES256'
                 }
             }
         ]
@@ -28,13 +28,13 @@ def test_get_bucket_encryption():
     s3.put_bucket_encryption(Bucket=bucket_name, ServerSideEncryptionConfiguration=encryption_config)
 
     result = get_bucket_encryption(bucket_name)
-    assert result["SSEAlgorithm"] == "AES256"
+    assert result['SSEAlgorithm'] == 'AES256'
 
 
 @mock_aws
 def test_get_bucket_encryption_no_config():
-    s3 = client("s3")
-    bucket_name = "test-bucket"
+    s3 = client('s3')
+    bucket_name = 'test-bucket'
     s3.create_bucket(
         Bucket=bucket_name,
         CreateBucketConfiguration={
@@ -48,8 +48,8 @@ def test_get_bucket_encryption_no_config():
 
 @mock_aws
 def test_check_sse_c_allowed():
-    s3 = client("s3")
-    bucket_name = "test-bucket"
+    s3 = client('s3')
+    bucket_name = 'test-bucket'
     s3.create_bucket(
         Bucket=bucket_name,
         CreateBucketConfiguration={
@@ -63,8 +63,8 @@ def test_check_sse_c_allowed():
 
 @mock_aws
 def test_check_tls_enforced():
-    s3 = client("s3")
-    bucket_name = "test-bucket"
+    s3 = client('s3')
+    bucket_name = 'test-bucket'
     s3.create_bucket(
         Bucket=bucket_name,
         CreateBucketConfiguration={
@@ -72,15 +72,15 @@ def test_check_tls_enforced():
         }
     )
     bucket_policy = {
-        "Version": "2012-10-17",
-        "Statement": [
+        'Version': '2012-10-17',
+        'Statement': [
             {
-                "Effect": "Deny",
-                "Principal": "*",
-                "Action": "s3:*",
-                "Resource": f"arn:aws:s3:::{bucket_name}/*",
-                "Condition": {
-                    "Bool": {"aws:SecureTransport": "false"}
+                'Effect': 'Deny',
+                'Principal': '*',
+                'Action': 's3:*',
+                'Resource': f'arn:aws:s3:::{bucket_name}/*',
+                'Condition': {
+                    'Bool': {'aws:SecureTransport': 'false'}
                 }
             }
         ]
@@ -92,8 +92,8 @@ def test_check_tls_enforced():
 
 @mock_aws
 def test_check_tls_not_enforced():
-    s3 = client("s3")
-    bucket_name = "test-bucket"
+    s3 = client('s3')
+    bucket_name = 'test-bucket'
     s3.create_bucket(
         Bucket=bucket_name,
         CreateBucketConfiguration={
@@ -106,8 +106,8 @@ def test_check_tls_not_enforced():
 
 @mock_aws
 def test_get_bucket_location():
-    s3 = client("s3")
-    bucket_name = "test-bucket"
+    s3 = client('s3')
+    bucket_name = 'test-bucket'
     s3.create_bucket(
         Bucket=bucket_name,
         CreateBucketConfiguration={
@@ -120,8 +120,8 @@ def test_get_bucket_location():
 
 @mock_aws
 def test_get_key_location():
-    s3 = client("s3")
-    bucket_name = "test-bucket"
+    s3 = client('s3')
+    bucket_name = 'test-bucket'
     s3.create_bucket(
         Bucket=bucket_name,
         CreateBucketConfiguration={
@@ -129,10 +129,10 @@ def test_get_key_location():
         }
     )
     encryption_config = {
-        "Rules": [
+        'Rules': [
             {
-                "ApplyServerSideEncryptionByDefault": {
-                    "SSEAlgorithm": "dsse:kms"
+                'ApplyServerSideEncryptionByDefault': {
+                    'SSEAlgorithm': 'dsse:kms'
                 }
             }
         ]

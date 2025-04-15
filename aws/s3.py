@@ -1,4 +1,5 @@
 from boto3 import client as boto_client
+from json import dumps
 from tqdm import tqdm
 from rich.console import Console
 from rich.table import Table
@@ -23,7 +24,7 @@ def list_buckets() -> list:
     return buckets
 
 
-def evaluate_s3_encryption(bucket: str):
+def evaluate_s3_encryption(bucket: str) -> dict:
     '''
     Outputs information about S3 bucket encryption settings
 
@@ -59,7 +60,7 @@ def evaluate_s3_encryption(bucket: str):
     }
 
 
-def evaluate_s3_public_access(bucket: str):
+def evaluate_s3_public_access(bucket: str) -> dict:
     '''
     Output information about S3 Public Access Block settings
 
@@ -71,11 +72,52 @@ def evaluate_s3_public_access(bucket: str):
     }
 
 
-def output_json(enc, pub):
-    pass
+def output_json(buckets: list, enc: bool, pub: bool) -> None:
+    '''
+    Outputs the result in JSON, useful for automation
+
+    Args: (bool) enc - encryption module
+          (bool) pub - public access module
+
+    Returns: None
+    '''
+    bucket_encryption = {}
+    public_access = {}
+    for bucket in buckets:
+        if enc:
+            bucket_encryption[bucket] = evaluate_s3_encryption(bucket)
+        if pub:
+            public_access[bucket] = evaluate_s3_public_access(bucket)
+
+    evaluation = []
+    for bucket in buckets:
+        evaluation.append({
+            'BucketName': bucket,
+            'Encryption': {
+                'KeyLocation': bucket_encryption.get(bucket, {}).get('KeyLocation', ''),
+                'TLS': bucket_encryption.get(bucket, {}).get('TLS', ''),
+                'SSE-C': bucket_encryption.get(bucket, {}).get('SSE-C', ''),
+                'BucketLocation': bucket_encryption.get(bucket, {}).get('BucketLocation'),
+                'Algorithm': bucket_encryption.get(bucket, {}).get('Algorithm'),
+                'Key': bucket_encryption.get(bucket, {}).get('Key')
+            },
+            'PublicAccess': {
+                'PublicAccess': public_access.get(bucket, {}).get('PublicAccess', '')
+            }
+        })
+
+    print(dumps(evaluation))
 
 
-def output_table(buckets, enc, pub):
+def output_table(buckets: list, enc: bool, pub: bool) -> None:
+    '''
+    Outputs the result in table, useful for CLI and human
+    
+    Args: (bool) enc - encryption module
+          (bool) pub - public access module
+
+    Returns: None
+    '''
     table = Table(title='S3 Bucket Security Scan Results')
     table.add_column('Bucket Name', style='cyan', justify='left')
     table.add_column('Bucket Location', style='magenta', justify='center')
