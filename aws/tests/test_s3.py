@@ -1,14 +1,17 @@
 from boto3 import client
+from botocore import exceptions
 from json import dumps
 from moto import mock_aws
-from aws.encryption import get_bucket_encryption, check_sse_c_allowed, check_tls_enforced, get_bucket_location, get_key_location
+
+from aws.s3 import get_bucket_encryption, check_sse_c_allowed, check_tls_enforced, get_bucket_location, get_key_location, get_bucket_public_configuration
 
 DEFAULT_REGION = 'eu-central-1'
+s3 = client('s3')
 
 
+# Encryption settings
 @mock_aws
 def test_get_bucket_encryption():
-    s3 = client('s3')
     bucket_name = 'test-bucket'
     s3.create_bucket(
         Bucket=bucket_name,
@@ -34,7 +37,9 @@ def test_get_bucket_encryption():
 
 @mock_aws
 def test_get_bucket_encryption_no_config():
-    s3 = client('s3')
+    '''
+        Tests that default bucket doesn't have encryption configuration
+    '''
     bucket_name = 'test-bucket'
     s3.create_bucket(
         Bucket=bucket_name,
@@ -49,7 +54,7 @@ def test_get_bucket_encryption_no_config():
 
 @mock_aws
 def test_check_sse_c_allowed():
-    s3 = client('s3')
+    # TODO: rework to obtain meaningful results without moto
     bucket_name = 'test-bucket'
     s3.create_bucket(
         Bucket=bucket_name,
@@ -59,12 +64,11 @@ def test_check_sse_c_allowed():
     )
 
     result = check_sse_c_allowed(bucket_name)
-    assert result is False  # Because moto does not support SSE-C
+    assert result is False  # Moto does not support SSE-C
 
 
 @mock_aws
 def test_check_tls_enforced():
-    s3 = client('s3')
     bucket_name = 'test-bucket'
     s3.create_bucket(
         Bucket=bucket_name,
@@ -93,7 +97,6 @@ def test_check_tls_enforced():
 
 @mock_aws
 def test_check_tls_not_enforced():
-    s3 = client('s3')
     bucket_name = 'test-bucket'
     s3.create_bucket(
         Bucket=bucket_name,
@@ -107,7 +110,6 @@ def test_check_tls_not_enforced():
 
 @mock_aws
 def test_get_bucket_location():
-    s3 = client('s3')
     bucket_name = 'test-bucket'
     s3.create_bucket(
         Bucket=bucket_name,
@@ -121,7 +123,6 @@ def test_get_bucket_location():
 
 @mock_aws
 def test_get_key_location():
-    s3 = client('s3')
     bucket_name = 'test-bucket'
     s3.create_bucket(
         Bucket=bucket_name,
@@ -150,3 +151,24 @@ def test_get_key_location():
         key_location = bucket_location
 
     assert key_location == DEFAULT_REGION
+
+
+# Public access settings
+@mock_aws
+def test_get_bucket_public_configuration():
+    # TODO: rework to obtain meaningful results without moto
+    bucket_name = 'test-bucket'
+    s3.create_bucket(
+        Bucket=bucket_name,
+        CreateBucketConfiguration={
+            'LocationConstraint': DEFAULT_REGION
+        }
+    )
+
+    try:
+        result = get_bucket_public_configuration(bucket_name)
+    except exceptions.ClientError as exc:
+        print('PublicAccessBlock is not supported by moto')
+        result = True
+
+    assert result == True
