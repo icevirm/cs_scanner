@@ -152,10 +152,10 @@ def output_table(buckets: list, enc: bool, pub: bool) -> None:
     '''
     table = Table(title='GCS Buckets Security Scan Results')
     table.add_column('Bucket Name', style='cyan', justify='left')
+    table.add_column('Bucket Location', style='magenta', justify='center')
     table.add_column('Encryption Type', style='magenta', justify='center')
     table.add_column('Encryption Key', style='magenta', justify='center')
     table.add_column('Key Location', style='magenta', justify='center')
-    table.add_column('Bucket Location', style='magenta', justify='center')
     table.add_column('Public Access', style='green', justify='center')
 
     bucket_encryption = {}
