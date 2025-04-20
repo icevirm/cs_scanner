@@ -11,15 +11,17 @@ s3 = boto_client('s3')
 
 console = Console()
 
+
 def list_buckets() -> list:
     '''
     Returns all S3 buckets in the current account, except CDK bootstrap one
-    
+
     Args: None
     Returns: (list) buckets - list of S3 buckets in the current account
     '''
     response = s3.list_buckets()
-    buckets = [bucket['Name'] for bucket in response['Buckets'] if not bucket['Name'].startswith('cdk-')]
+    buckets = [bucket['Name'] for bucket in response['Buckets']
+               if not bucket['Name'].startswith('cdk-')]
 
     return buckets
 
@@ -112,7 +114,7 @@ def output_json(buckets: list, enc: bool, pub: bool) -> None:
 def output_table(buckets: list, enc: bool, pub: bool) -> None:
     '''
     Outputs the result in table, useful for CLI and human
-    
+
     Args: (bool) enc - encryption module
           (bool) pub - public access module
 
@@ -155,7 +157,8 @@ def output_table(buckets: list, enc: bool, pub: bool) -> None:
         elif enc and not sse_c_status:
             sse_c_status = '✅'
 
-        public_access_status = public_access.get(bucket, {}).get('PublicAccess', '')
+        public_access_status = public_access.get(
+            bucket, {}).get('PublicAccess', '')
         if public_access_status:
             public_access_status = f'✅'
         elif pub and public_access_status:

@@ -2,6 +2,7 @@ from boto3 import client as boto_client
 
 s3 = boto_client('s3')
 
+
 def get_bucket_public_configuration(bucket: str) -> bool:
     '''
     Checks the public access configuration of the bucket
@@ -16,5 +17,5 @@ def get_bucket_public_configuration(bucket: str) -> bool:
     for block in public_access_block['PublicAccessBlockConfiguration'].values():
         if not block:
             return False
-          
+
     return True

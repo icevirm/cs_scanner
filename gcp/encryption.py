@@ -11,7 +11,7 @@ client = storage.Client()
 def get_bucket(bucket: str) -> dict:
     '''
     Gets bucket configuration
-    
+
     Args: (str) bucket - the name of the bucket to scan
     Returns: (dict) Bucket object
     '''
@@ -26,7 +26,7 @@ def get_bucket(bucket: str) -> dict:
 def parse_key(key: str) -> str:
     '''
     Returns the location of the encryption key
-    
+
     Args: (str) key - encryption key used to encrypt the bucket
     Returns: (str) - key location parsed from the name, e.g.
         projects/project-1234/locations/europe-west1/keyRings/storage-eu/cryptoKeys/buckets-eu -> europe-west1
@@ -54,8 +54,8 @@ def encryption_configuration(buckets: list) -> None:
         default_kms_key_name = bucket_object.default_kms_key_name
         location = bucket_object.location.lower()
         encryption_algorithm = 'AES-256'
-        
-        if default_kms_key_name: 
+
+        if default_kms_key_name:
             encryption_key = 'Customer Managed'
             key_location = parse_key(default_kms_key_name)
         else:
@@ -66,8 +66,9 @@ def encryption_configuration(buckets: list) -> None:
             bucket,
             encryption_algorithm,
             encryption_key,
-            f'{key_location}: ✅' if key_location.startswith('europe-') else '❌',
+            f'{key_location}: ✅' if key_location.startswith(
+                'europe-') else '❌',
             f'{location}: ✅' if location.startswith('europe-') else '❌'
         )
-        
+
     console.print(table)

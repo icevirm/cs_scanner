@@ -1,12 +1,13 @@
 from google.cloud import storage
-from . import encryption
+from . import encryption, public_access
 
 client = storage.Client()
+
 
 def list_buckets() -> list:
     '''
     Returns all buckets in the current account
-    
+
     Args: None
     Returns: (list) buckets - list of buckets in the current account
     '''
@@ -15,7 +16,8 @@ def list_buckets() -> list:
 
     return buckets
 
-def evaluate_storage_security(enc: bool) -> None:
+
+def evaluate_storage_security(enc: bool, pub: bool, json: bool) -> None:
     '''
     Runs different security checks on GCS buckets in the account and reports the results
 
@@ -28,5 +30,7 @@ def evaluate_storage_security(enc: bool) -> None:
 
     if enc:
         encryption.encryption_configuration(buckets)
+    elif pub:
+        public_access.public_access_configuration(buckets)
     else:
         pass

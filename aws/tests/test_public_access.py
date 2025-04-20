@@ -5,6 +5,7 @@ from aws.public_access import get_bucket_public_configuration
 
 DEFAULT_REGION = 'eu-central-1'
 
+
 @mock_aws
 def test_get_bucket_public_configuration():
     '''

@@ -25,7 +25,8 @@ def test_get_bucket_encryption():
             }
         ]
     }
-    s3.put_bucket_encryption(Bucket=bucket_name, ServerSideEncryptionConfiguration=encryption_config)
+    s3.put_bucket_encryption(
+        Bucket=bucket_name, ServerSideEncryptionConfiguration=encryption_config)
 
     result = get_bucket_encryption(bucket_name)
     assert result['SSEAlgorithm'] == 'AES256'
@@ -41,7 +42,7 @@ def test_get_bucket_encryption_no_config():
             'LocationConstraint': DEFAULT_REGION
         }
     )
-    
+
     result = get_bucket_encryption(bucket_name)
     assert result is None
 
@@ -56,7 +57,7 @@ def test_check_sse_c_allowed():
             'LocationConstraint': DEFAULT_REGION
         }
     )
-    
+
     result = check_sse_c_allowed(bucket_name)
     assert result is False  # Because moto does not support SSE-C
 
@@ -100,7 +101,7 @@ def test_check_tls_not_enforced():
             'LocationConstraint': DEFAULT_REGION
         }
     )
-    
+
     assert check_tls_enforced(bucket_name) is False
 
 
@@ -137,7 +138,8 @@ def test_get_key_location():
             }
         ]
     }
-    s3.put_bucket_encryption(Bucket=bucket_name, ServerSideEncryptionConfiguration=encryption_config)
+    s3.put_bucket_encryption(
+        Bucket=bucket_name, ServerSideEncryptionConfiguration=encryption_config)
 
     encryption = get_bucket_encryption(bucket_name)
     if 'KMSMasterKeyID' in encryption:

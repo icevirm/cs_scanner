@@ -20,7 +20,7 @@ def get_bucket_encryption(bucket: str) -> dict:
         response = s3.get_bucket_encryption(Bucket=bucket)
 
         return response['ServerSideEncryptionConfiguration']['Rules'][0]['ApplyServerSideEncryptionByDefault']
-    
+
     except exceptions.ClientError as err:
         print(f'Encryption is not configured.')
 
@@ -28,7 +28,7 @@ def get_bucket_encryption(bucket: str) -> dict:
 def check_sse_c_allowed(bucket: str) -> bool:
     '''
     Checks if it is possible to upload and then get an object onto S3 bucket with a customer key (SSE-C)
-    
+
     Args: (str) bucket - the name of the bucket to scan
     Returns: (bool) sse_c_status - if True, then SSE-C is allowed, posing a security risk
     '''
@@ -73,7 +73,8 @@ def check_sse_c_allowed(bucket: str) -> bool:
             Key=object_key,
             SSECustomerAlgorithm='AES256',
             SSECustomerKey=b64encode(encryption_key).decode('utf-8'),
-            SSECustomerKeyMD5=b64encode(md5(encryption_key).digest()).decode('utf-8')
+            SSECustomerKeyMD5=b64encode(
+                md5(encryption_key).digest()).decode('utf-8')
         )
     except:
         print('Something went wrong with getting object')
@@ -114,6 +115,7 @@ def get_bucket_location(bucket: str) -> str:
     location = s3.get_bucket_location(Bucket=bucket)
 
     return location['LocationConstraint']
+
 
 def get_key_location(encryption_key: str) -> str:
     '''
