@@ -263,7 +263,7 @@ def output_json(buckets: list, enc: bool, pub: bool) -> None:
 
 def output_table(buckets: list, enc: bool, pub: bool) -> None:
     '''
-        Outputs the result in table, useful for CLI and human
+        Outputs the result in table, useful for CLI and humans
 
         Args: (bool) enc - encryption module
             (bool) pub - public access module
