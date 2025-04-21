@@ -3,6 +3,7 @@ from unittest.mock import patch, MagicMock
 
 from gcp.storage import get_bucket, parse_key, evaluate_storage_encryption, get_public_prevention, evaluate_storage_public_access, list_buckets
 
+
 class TestGCSModule(unittest.TestCase):
 
     @patch("gcp.storage.get_client")
@@ -94,4 +95,3 @@ class TestGCSModule(unittest.TestCase):
 
         result = list_buckets()
         self.assertEqual(result, ["bucket-a", "bucket-b"])
-
