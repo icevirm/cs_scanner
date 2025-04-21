@@ -6,7 +6,9 @@ from rich.table import Table
 
 console = Console()
 
-client = storage.Client()
+
+def get_client():
+    return storage.Client()
 
 
 # Encryption settings
@@ -18,7 +20,7 @@ def get_bucket(bucket: str) -> dict:
         Returns: (dict) Bucket object
     '''
     try:
-        response = client.get_bucket(bucket)
+        response = get_client().get_bucket(bucket)
         return response
     except Exception as e:
         print(e)
@@ -99,7 +101,7 @@ def list_buckets() -> list:
         Args: None
         Returns: (list) buckets - list of buckets in the current account
     '''
-    response = client.list_buckets()
+    response = get_client().list_buckets()
     buckets = [bucket.name for bucket in response]
 
     return buckets
