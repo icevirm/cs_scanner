@@ -9,17 +9,40 @@ from base64 import b64encode
 from boto3 import client as boto_client
 from botocore import exceptions
 from hashlib import md5
-from json import dumps, loads
-from tqdm import tqdm
+from json import dumps, loads, JSONDecodeError
+from os import getenv
+from requests import post
 from rich.console import Console
 from rich.table import Table
+from tqdm import tqdm
 
 from .helpers import parse_arn
 
 s3 = boto_client('s3')
 kms = boto_client('kms')
+LLM_HOST = getenv('LLM_HOST')
 
 console = Console()
+
+
+# Chat with LLM
+def ask_model(prompt):
+    response = post(
+        f'http://{LLM_HOST}/api/generate',
+        json={
+            'model': 'mistral',
+            'prompt': prompt,
+            'stream': False
+        }
+    )
+
+    output = response.json()['response']
+
+    try:
+        return loads(output)
+    except JSONDecodeError:
+        print("Failed to decode response:")
+        print(output)
 
 
 # Encryption settings
@@ -194,6 +217,8 @@ def evaluate_s3_encryption(bucket: str) -> dict:
     tls_status = check_tls_enforced(bucket)
     bucket_location = get_bucket_location(bucket)
 
+    evaluate_bucket_policy(bucket)
+
     if 'KMSMasterKeyID' in encryption:
         encryption_key = encryption['KMSMasterKeyID']
         key_location = get_key_location(encryption_key)
@@ -220,6 +245,29 @@ def evaluate_s3_public_access(bucket: str) -> dict:
     '''
     return {
         'PublicAccess': get_bucket_public_configuration(bucket)
+    }
+
+
+def evaluate_bucket_policy(bucket: str) -> dict:
+    response = s3.get_bucket_policy(Bucket=bucket)
+    policy = loads(response['Policy'])
+
+    prompt = \
+    f"""
+        Evaluate the following AWS IAM policy. 
+        Respond strictly in JSON with this format: 
+        {{"Policy": "Good" or "Bad", "Reason": "short explanation"}}.
+
+        Policy:
+        {dumps(policy, indent=2)}
+    """
+    model_response = ask_model(prompt)
+
+    print(model_response)
+    
+    return {
+        'Status': model_response['Policy'],
+        'Reason': model_response['Reason']
     }
 
 

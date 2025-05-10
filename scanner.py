@@ -18,56 +18,52 @@ import aws
 import gcp
 
 
+SUPPORTED_SERVICES_AWS = ['s3']
+SUPPORTED_SERVICES_GCP = ['storage']
+
+
 def main() -> None:
     '''
         This is the main module - to call security evaluations for different
         services and configurations.
-
-        Supported parameters:
-        # Cloud Service Provider
-        --aws, -a: Scan AWS resources
-        --gcp, -g: Scan Google Cloud resources
-
-        # Cloud service
-        --storage, -s: Scan storage resources, such as S3 in AWS
-                       or Cloud Storage in GCP
-
-        # Configuration
-        --encryption, -e: Scan encryption settings
-        --public, -p: Scan public access settings
-
-        # Output
-        --json: Output in JSON, otherwise in table format
     '''
-    description = 'Scans cloud resources and provides security report'
+    description = 'This tool scans cloud resources and provides security report'
     parser = argparse.ArgumentParser(description=description)
-    parser.add_argument('-a', '--aws', action='store_true',
-                        help='AWS resources')
-    parser.add_argument('-g', '--gcp', action='store_true',
-                        help='GCP resources')
-    parser.add_argument('-s', '--storage',
-                        action='store_true', help='Storage service')
-    parser.add_argument('-e', '--encryption',
+
+    provider = parser.add_argument_group("Cloud provider")
+    provider.add_argument('provider', choices=['aws', 'gcp'], default='aws', help='Cloud provider')
+
+    services = parser.add_argument_group("Services")
+    services.add_argument('service', help='Cloud service')
+    
+    configurations = parser.add_argument_group("Configurations")
+    configurations.add_argument('-e', '--encryption',
                         action='store_true', help='Scan encryption settings')
-    parser.add_argument('-p', '--public', action='store_true',
+    configurations.add_argument('-p', '--public', action='store_true',
                         help='Scan public access settings')
-    parser.add_argument('--json', action='store_true', help='Output in json')
+    
+    output = parser.add_argument_group("Output")
+    output.add_argument('--json', action='store_true', help='Output in JSON')
+    
     args = parser.parse_args()
 
-    if args.aws:
-        if args.storage:
+    if not (args.encryption or args.public):
+        args.encryption = args.public = True
+
+    if args.provider == 'aws':
+        if args.service == 's3':
             aws.s3.evaluate_s3_security(enc=args.encryption,
                                         pub=args.public, json=args.json)
         else:
-            print('Choose at least one service.')
-    elif args.gcp:
-        if args.storage:
+            print(f'Service {args.service} is not supported.')
+            print(f'Supported services: {", ".join(SUPPORTED_SERVICES_AWS)}')
+    elif args.provider == 'gcp':
+        if args.service == 'storage':
             gcp.storage.evaluate_storage_security(
                 enc=args.encryption, pub=args.public, json=args.json)
         else:
-            print('Choose at least one service.')
-    else:
-        print('Choose at least one cloud provider.')
+            print(f'Service {args.service} is not supported.')
+            print(f'Supported services: {", ".join(SUPPORTED_SERVICES_GCP)}')
 
 
 if __name__ == '__main__':
