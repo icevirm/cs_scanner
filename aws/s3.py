@@ -249,12 +249,18 @@ def evaluate_s3_public_access(bucket: str) -> dict:
 
 
 def evaluate_bucket_policy(bucket: str) -> dict:
+    '''
+        Evaluates bucket policy with the help of LLM
+
+        Args: (str) bucket - name of S3 bucket to be scanned
+        Returns: (dict) - evaluation result
+    '''
     response = s3.get_bucket_policy(Bucket=bucket)
     policy = loads(response['Policy'])
 
     prompt = \
     f"""
-        Evaluate the following AWS IAM policy. 
+        Evaluate the following AWS IAM S3 bucket policy. 
         Respond strictly in JSON with this format: 
         {{"Policy": "Good" or "Bad", "Reason": "short explanation"}}.
 
@@ -263,11 +269,9 @@ def evaluate_bucket_policy(bucket: str) -> dict:
     """
     model_response = ask_model(prompt)
 
-    print(model_response)
-    
     return {
-        'Status': model_response['Policy'],
-        'Reason': model_response['Reason']
+        'PolicyStatus': model_response['Policy'],
+        'PolicyReason': model_response['Reason']
     }
 
 
@@ -283,11 +287,13 @@ def output_json(buckets: list, enc: bool, pub: bool) -> None:
     '''
     bucket_encryption = {}
     public_access = {}
+    access_policy = {}
     for bucket in buckets:
         if enc:
             bucket_encryption[bucket] = evaluate_s3_encryption(bucket)
         if pub:
             public_access[bucket] = evaluate_s3_public_access(bucket)
+            access_policy[bucket] = evaluate_bucket_policy(bucket)
 
     evaluation = []
     for bucket in buckets:
@@ -302,7 +308,9 @@ def output_json(buckets: list, enc: bool, pub: bool) -> None:
                 'Key': bucket_encryption.get(bucket, {}).get('Key')
             },
             'PublicAccess': {
-                'PublicAccess': public_access.get(bucket, {}).get('PublicAccess', '')
+                'PublicAccess': public_access.get(bucket, {}).get('PublicAccess', ''),
+                'BucketPolicy': access_policy.get(bucket, {}).get('PolicyStatus', ''),
+                'BucketPolicyReason': access_policy.get(bucket, {}).get('PolicyReason', ''),
             }
         })
 
@@ -327,14 +335,17 @@ def output_table(buckets: list, enc: bool, pub: bool) -> None:
     table.add_column('TLS Enforced', style='green', justify='center')
     table.add_column('SSE-C Blocked', style='green', justify='center')
     table.add_column('Public Access', style='green', justify='center')
+    table.add_column('Bucket Policy', style='green', justify='center')
 
     bucket_encryption = {}
     public_access = {}
+    access_policy = {}
     for bucket in tqdm(buckets, desc='Scanning Buckets', unit='bucket'):
         if enc:
             bucket_encryption[bucket] = evaluate_s3_encryption(bucket)
         if pub:
             public_access[bucket] = evaluate_s3_public_access(bucket)
+            access_policy[bucket] = evaluate_bucket_policy(bucket)
 
     for bucket in buckets:
         key_location = bucket_encryption.get(bucket, {}).get('KeyLocation', '')
@@ -347,7 +358,7 @@ def output_table(buckets: list, enc: bool, pub: bool) -> None:
         if tls_status:
             tls_status = '✅'
         elif enc and not tls_status:
-            tls_status = ''
+            tls_status = '❌'
 
         sse_c_status = bucket_encryption.get(bucket, {}).get('SSE-C', '')
         if sse_c_status:
@@ -358,9 +369,16 @@ def output_table(buckets: list, enc: bool, pub: bool) -> None:
         public_access_status = public_access.get(
             bucket, {}).get('PublicAccess', '')
         if public_access_status:
-            public_access_status = f'✅'
-        elif pub and public_access_status:
+            public_access_status = '✅'
+        elif pub and not public_access_status:
             public_access_status = '❌'
+
+        bucket_policy_status = access_policy.get(
+                bucket, {}).get('PolicyStatus', '')
+        if bucket_policy_status == 'Bad':
+            bucket_policy_status = '❌'
+        elif bucket_policy_status == 'Good':
+            bucket_policy_status = '✅'
 
         table.add_row(
             bucket,
@@ -370,7 +388,8 @@ def output_table(buckets: list, enc: bool, pub: bool) -> None:
             key_location,
             tls_status,
             sse_c_status,
-            public_access_status
+            public_access_status,
+            bucket_policy_status
         )
 
     console.print(table)
