@@ -2,8 +2,9 @@ from boto3 import client
 from botocore import exceptions
 from json import dumps
 from moto import mock_aws
+from unittest.mock import patch, MagicMock
 
-from aws.s3 import get_bucket_encryption, check_sse_c_allowed, check_tls_enforced, get_bucket_location, get_key_location, get_bucket_public_configuration
+from aws.s3 import get_bucket_encryption, check_sse_c_allowed, check_tls_enforced, get_bucket_location, get_key_location, get_bucket_public_configuration, ask_model, evaluate_bucket_policy
 
 DEFAULT_REGION = 'eu-central-1'
 s3 = client('s3')
@@ -172,3 +173,64 @@ def test_get_bucket_public_configuration():
         result = True
 
     assert result == True
+
+
+@patch('aws.s3.post')
+def test_ask_model_valid_json_response(mock_post):
+    mock_response = MagicMock()
+    mock_response.json.return_value = {'response': dumps({'Policy': 'Good', 'Reason': 'All good'})}
+    mock_post.return_value = mock_response
+
+    result = ask_model('Some prompt')
+    assert result == {'Policy': 'Good', 'Reason': 'All good'}
+
+
+@patch('aws.s3.post')
+def test_ask_model_invalid_json_response(mock_post, capsys):
+    mock_response = MagicMock()
+    mock_response.json.return_value = {'response': 'Not a JSON string'}
+    mock_post.return_value = mock_response
+
+    result = ask_model('Some prompt')
+    assert result is None
+
+    captured = capsys.readouterr()
+    assert 'Failed to decode response' in captured.out
+    assert 'Not a JSON string' in captured.out
+
+@mock_aws
+@patch('aws.s3.ask_model')
+def test_evaluate_bucket_policy(mock_ask_model):
+    s3 = client('s3', region_name='eu-central-1')
+    bucket_name = 'example-bucket'
+    s3.create_bucket(
+        Bucket=bucket_name,
+        CreateBucketConfiguration={
+            'LocationConstraint': DEFAULT_REGION
+        })
+
+    test_policy = {
+        'Version': '2012-10-17',
+        'Statement': [{
+            'Effect': 'Allow',
+            'Principal': '*',
+            'Action': 's3:GetObject',
+            'Resource': f'arn:aws:s3:::{bucket_name}/*'
+        }]
+    }
+
+    s3.put_bucket_policy(Bucket=bucket_name, Policy=dumps(test_policy))
+
+    mock_ask_model.return_value = {
+        'Policy': 'Bad',
+        'Reason': 'Bucket is publicly accessible'
+    }
+
+    result = evaluate_bucket_policy(bucket_name)
+
+    assert result == {
+        'PolicyStatus': 'Bad',
+        'PolicyReason': 'Bucket is publicly accessible'
+    }
+
+    mock_ask_model.assert_called_once()
