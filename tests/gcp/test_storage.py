@@ -1,12 +1,12 @@
 import unittest
 from unittest.mock import patch, MagicMock
 
-from gcp.storage import get_bucket, parse_key, evaluate_storage_encryption, get_public_prevention, evaluate_storage_public_access, list_buckets
+from cs_scanner.gcp.storage import get_bucket, parse_key, evaluate_storage_encryption, get_public_prevention, evaluate_storage_public_access, list_buckets
 
 
 class TestGCSModule(unittest.TestCase):
 
-    @patch("gcp.storage.get_client")
+    @patch("cs_scanner.gcp.storage.get_client")
     def test_get_bucket(self, mock_get_client):
         mock_client = MagicMock()
         mock_bucket = MagicMock()
@@ -22,7 +22,7 @@ class TestGCSModule(unittest.TestCase):
         result = parse_key(key)
         self.assertEqual(result, "europe-west1")
 
-    @patch("gcp.storage.get_client")
+    @patch("cs_scanner.gcp.storage.get_client")
     def test_evaluate_storage_encryption_cmek(self, mock_get_client):
         mock_bucket = MagicMock()
         mock_bucket.default_kms_key_name = "projects/project/locations/us/keyRings/kr/cryptoKeys/key"
@@ -41,7 +41,7 @@ class TestGCSModule(unittest.TestCase):
         }
         self.assertEqual(result, expected)
 
-    @patch("gcp.storage.get_client")
+    @patch("cs_scanner.gcp.storage.get_client")
     def test_evaluate_storage_encryption_gmek(self, mock_get_client):
         mock_bucket = MagicMock()
         mock_bucket.default_kms_key_name = None
@@ -70,7 +70,7 @@ class TestGCSModule(unittest.TestCase):
         mock_bucket.iam_configuration.public_access_prevention = "unspecified"
         self.assertFalse(get_public_prevention(mock_bucket))
 
-    @patch("gcp.storage.get_client")
+    @patch("cs_scanner.gcp.storage.get_client")
     def test_evaluate_storage_public_access(self, mock_get_client):
         mock_bucket = MagicMock()
         mock_bucket.iam_configuration.public_access_prevention = "enforced"
@@ -82,7 +82,7 @@ class TestGCSModule(unittest.TestCase):
         result = evaluate_storage_public_access("test-bucket")
         self.assertEqual(result, {"PublicAccess": True})
 
-    @patch("gcp.storage.get_client")
+    @patch("cs_scanner.gcp.storage.get_client")
     def test_list_buckets(self, mock_get_client):
         mock_bucket_1 = MagicMock(name="bucket-a")
         mock_bucket_1.name = "bucket-a"

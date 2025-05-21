@@ -14,9 +14,8 @@
 '''
 import argparse
 
-import aws
-import gcp
-
+from cs_scanner import aws
+from cs_scanner import gcp
 
 SUPPORTED_SERVICES_AWS = ['s3']
 SUPPORTED_SERVICES_GCP = ['storage']
@@ -64,7 +63,3 @@ def main() -> None:
         else:
             print(f'Service {args.service} is not supported.')
             print(f'Supported services: {", ".join(SUPPORTED_SERVICES_GCP)}')
-
-
-if __name__ == '__main__':
-    main()

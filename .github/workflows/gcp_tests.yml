@@ -24,11 +24,10 @@ jobs:
           python -m venv .venv
           source .venv/bin/activate
           pip install --upgrade pip
-          pip install -r requirements-gcp.txt
-          pip install -r requirements-gcp-test.txt
+          pip install -r tests/requirements-gcp-test.txt
           pip install -e .
 
       - name: Run tests
         run: |
           source .venv/bin/activate
-          pytest --maxfail=5 --disable-warnings gcp/
+          pytest --maxfail=5 --disable-warnings tests/gcp/

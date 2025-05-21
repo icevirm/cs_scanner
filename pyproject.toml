@@ -1,0 +1,37 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cs_scanner"
+version = "0.1.0"
+description = "Cloud Security scanner tool"
+readme = "README.md"
+requires-python = ">=3.12"
+license = {file = "LICENSE"}
+authors = [
+    {name = "icevirm", email = "icevirm13@gmail.com"}
+]
+dependencies = [
+    "boto3",
+    "rich",
+    "tqdm",
+    "google-cloud-storage"
+]
+
+[project.scripts]
+cs_scanner = "cs_scanner.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/icevirm/cs_scanner"
+
+[tool.hatch.build]
+sources = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+addopts = "-ra"
+testpaths = ["tests"]
+filterwarnings = [
+  "ignore::DeprecationWarning"
+]

@@ -24,8 +24,7 @@ jobs:
           python -m venv .venv
           source .venv/bin/activate
           pip install --upgrade pip
-          pip install -r requirements-aws.txt
-          pip install -r requirements-aws-test.txt
+          pip install -r tests/requirements-aws-test.txt
           pip install -e .
 
       - name: Run tests
@@ -37,4 +36,4 @@ jobs:
           env | grep AWS
           aws sts get-caller-identity || echo "No credentials available"
           source .venv/bin/activate
-          pytest --maxfail=5 --disable-warnings aws/
+          pytest --maxfail=5 --disable-warnings tests/aws/
