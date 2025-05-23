@@ -1,11 +1,77 @@
-# Cloud Security Scanner
-This tool allows to check configuration settings of cloud resources and provides report on security status.
+# Cloud Security Scanner (cs_scanner)
 
-## Current status
-Implemented encryption modules for AWS S3 and GCP storage.
+**cs_scanner** is a modular CLI tool designed to scan and analyze security configurations in public cloud environments. It currently supports AWS and GCP, with Azure planned. The tool helps identify weak spots such as missing encryption, overly permissive access, and insecure IAM policies — especially where native tools like AWS Security Hub fall short.
 
-## How to use
-Recommended to create a virtualenv. Inside venv run `pip install -r requirements-<module>.txt` and then the scanner can be run as `python3 scanner.py -a/-g -e`, where
-`-a`: AWS
-`-g`: GCP
-`-e`: encryption
+## ✨ Features
+
+- 🔐 Encryption checks (S3/GCS buckets)
+- 🌍 Public access detection
+- 🔎 IAM policy analysis using LLMs (for AWS S3)
+- 📊 Output in human-readable tables or JSON
+- ⚙️ Modular structure, ready to scale across clouds and services
+
+## 🚀 Installation
+
+You can install locally using Python:
+
+```bash
+git clone https://github.com/yourusername/cs_scanner.git
+cd cs_scanner
+python -m pip install .
+```
+
+> **Note**: `pyproject.toml` and dependency management included. PyPI packaging is planned.
+
+## ⚡ Quick Start
+
+### AWS S3
+
+```bash
+cs_scanner aws s3 -e           # Encryption check
+cs_scanner aws s3 -p           # Public access check and policy analysis
+cs_scanner aws s3 -e -p --json # Combined check with JSON output
+```
+
+### GCP Storage
+
+```bash
+cs_scanner gcp storage -e -p   # Encryption + public access
+```
+
+## 🧠 Roadmap
+
+- ✅ AWS S3: encryption, public access, IAM analysis
+- ✅ GCP Storage: encryption, public access
+- ⏳ Azure support (in progress)
+- ⏳ Resource inventory module
+- ⏳ Threat intelligence: toxic IAM combinations
+- ⏳ Plugin support per cloud/service
+- ⏳ Web interface or full SaaS version
+
+## 🗂 Project Structure
+
+```
+src/cs_scanner/
+├── aws/           # AWS-specific scanners
+├── gcp/           # GCP-specific scanners
+├── cli.py         # CLI entry point
+```
+
+> Note: Output handling is currently mixed with logic — planned refactor will separate concerns.
+
+## 📝 License
+
+MIT — free to use, fork, and extend.
+
+---
+
+## ❤️ Contributing
+
+This is an early-stage project. All contributions, issue reports, and suggestions are welcome!
+
+---
+
+## 🌍 Vision
+
+Cloud Security Scanner aims to be a vendor-agnostic, open-source solution that complements native cloud security tooling — especially for European companies with strong compliance needs.
+
