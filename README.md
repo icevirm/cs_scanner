@@ -38,6 +38,20 @@ cs_scanner aws s3 -e -p --json # Combined check with JSON output
 cs_scanner gcp storage -e -p   # Encryption + public access
 ```
 
+### 🔍 AI-Assisted IAM Policy Evaluation (Optional)
+
+This tool can evaluate bucket IAM policies using a local LLM (e.g., Mistral) for heuristic risk analysis. This feature is **optional** and currenty only works if:
+
+1. You have a locally running LLM (tested with [Ollama](https://ollama.com/) and [Mistral](https://mistral.ai/)).
+2. The `LLM_HOST` environment variable is set to point to your local LLM server (default: `http://localhost:11434`).
+
+#### Example setup
+
+```bash
+ollama run mistral
+export LLM_HOST=http://localhost:11434
+```
+
 ## 🧠 Roadmap
 
 - ✅ AWS S3: encryption, public access, IAM analysis
