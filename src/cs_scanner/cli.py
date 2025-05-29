@@ -14,11 +14,13 @@
 '''
 import argparse
 
-from cs_scanner import aws
-from cs_scanner import gcp
+# from cs_scanner import aws
+# from cs_scanner import gcp
+from cs_scanner import az
 
 SUPPORTED_SERVICES_AWS = ['s3']
 SUPPORTED_SERVICES_GCP = ['storage']
+SUPPORTED_SERVICES_AZ = ['storage']
 
 
 def main() -> None:
@@ -30,7 +32,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=description)
 
     provider = parser.add_argument_group("Cloud provider")
-    provider.add_argument('provider', choices=['aws', 'gcp'], default='aws', help='Cloud provider')
+    provider.add_argument('provider', choices=['aws', 'gcp','az'], default='aws', help='Cloud provider')
 
     services = parser.add_argument_group("Services")
     services.add_argument('service', help='Cloud service')
@@ -43,6 +45,9 @@ def main() -> None:
     
     output = parser.add_argument_group("Output")
     output.add_argument('--json', action='store_true', help='Output in JSON')
+
+    account = parser.add_argument_group("Account details")
+    account.add_argument('--subscription', type='string', help='Azure subscription id to scan')
     
     args = parser.parse_args()
 
@@ -63,3 +68,13 @@ def main() -> None:
         else:
             print(f'Service {args.service} is not supported.')
             print(f'Supported services: {", ".join(SUPPORTED_SERVICES_GCP)}')
+    elif args.provider == 'az':
+        if not args.subscription:
+            print(f'Please add an Azure subscription ID that you would like to scan using --subscription.')
+            exit()
+        if args.service == 'storage':
+            azure.storage_account.evaluate_storage_security(sub=args.subscription,
+                enc=args.encryption, pub=args.public, json=args.json)
+        else:
+            print(f'Service {args.service} is not supported.')
+            print(f'Supported services: {", ".join(SUPPORTED_SERVICES_AZ)}')
