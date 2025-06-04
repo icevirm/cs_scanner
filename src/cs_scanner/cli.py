@@ -14,8 +14,8 @@
 '''
 import argparse
 
-# from cs_scanner import aws
-# from cs_scanner import gcp
+from cs_scanner import aws
+from cs_scanner import gcp
 from cs_scanner import az
 
 SUPPORTED_SERVICES_AWS = ['s3']
