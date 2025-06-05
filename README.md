@@ -1,6 +1,6 @@
 # Cloud Security Scanner (cs_scanner)
 
-**cs_scanner** is a modular CLI tool designed to scan and analyze security configurations in public cloud environments. It currently supports AWS and GCP, with Azure planned. The tool helps identify weak spots such as missing encryption, overly permissive access, and insecure IAM policies — especially where native tools like AWS Security Hub fall short.
+**cs_scanner** is a modular CLI tool designed to scan and analyze security configurations in public cloud environments. It currently supports AWS, Azure and GCP. The tool helps identify weak spots such as missing encryption, overly permissive access, and insecure IAM policies — especially where native tools like AWS Security Hub fall short.
 
 ## ✨ Features
 
@@ -38,6 +38,12 @@ cs_scanner aws s3 -e -p --json # Combined check with JSON output
 cs_scanner gcp storage -e -p   # Encryption + public access
 ```
 
+### Azure Storage Account
+
+```bash
+cs_scanner az storage -e -p # Encryption + public access
+```
+
 ### 🔍 AI-Assisted IAM Policy Evaluation (Optional)
 
 This tool can evaluate bucket IAM policies using a local LLM (e.g., Mistral) for heuristic risk analysis. This feature is **optional** and currenty only works if:
@@ -56,7 +62,7 @@ export LLM_HOST=http://localhost:11434
 
 - ✅ AWS S3: encryption, public access, IAM analysis
 - ✅ GCP Storage: encryption, public access
-- ⏳ Azure support (in progress)
+- ✅ Azure Storage Account: encryption
 - ⏳ Resource inventory module
 - ⏳ Threat intelligence: toxic IAM combinations
 - ⏳ Plugin support per cloud/service
@@ -68,6 +74,7 @@ export LLM_HOST=http://localhost:11434
 src/cs_scanner/
 ├── aws/           # AWS-specific scanners
 ├── gcp/           # GCP-specific scanners
+├── az             # Azure-specific scanners
 ├── cli.py         # CLI entry point
 ```
 

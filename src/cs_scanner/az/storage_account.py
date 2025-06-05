@@ -1,7 +1,6 @@
 '''
     This modules scans configuration settings of Azure Storage Accounts
     in the given subscription.
-
 '''
 
 from azure.identity import DefaultAzureCredential
@@ -16,11 +15,13 @@ def create_storage_mgmt_client(credential, subscription_id):
     '''
     return StorageManagementClient(credential, subscription_id)
 
+
 def get_all_storage_accounts_in_subscription(storage_client):
     '''
         Creates Iterable of all Storage Accounts in given subscription
     '''
     return storage_client.storage_accounts.list()
+
 
 def check_encryption(storage_account) -> dict:
     '''
@@ -53,8 +54,9 @@ def check_encryption(storage_account) -> dict:
 
     if storage_account.encryption.services.queue:
         encryption_status['Services']['Queue'] = storage_account.encryption.services.queue.enabled
-    
+
     return encryption_status
+
 
 def check_public_access(storage_account) -> dict:
     '''
@@ -69,6 +71,7 @@ def check_public_access(storage_account) -> dict:
         'DefaultFirewallAction': storage_account.network_rule_set.default_action
     }
     return public_status
+
 
 def evaluate(storage_accounts: list, enc: bool, pub: bool) -> list:
     '''
@@ -85,18 +88,20 @@ def evaluate(storage_accounts: list, enc: bool, pub: bool) -> list:
     for storage in storage_accounts:
 
         storage_account_evaluation = {
-        'StorageAccountName': storage.name,
-        'Encryption': {},
-        'PublicAccess': {}
+            'StorageAccountName': storage.name,
+            'Encryption': {},
+            'PublicAccess': {}
         }
-        
+
         if enc:
-            storage_account_evaluation['Encryption'] = check_encryption(storage)
+            storage_account_evaluation['Encryption'] = check_encryption(
+                storage)
         if pub:
-            storage_account_evaluation['PublicAccess'] = check_public_access(storage)
+            storage_account_evaluation['PublicAccess'] = check_public_access(
+                storage)
 
         evaluations.append(storage_account_evaluation)
-    
+
     return evaluations
 
 # Output
@@ -108,6 +113,7 @@ def output_json(evaluations: list) -> None:
         Returns: None
     '''
     print(dumps(evaluations))
+
 
 def output_table(evaluations: list) -> None:
     '''
@@ -132,7 +138,7 @@ def evaluate_storage_security(sub, enc: bool, pub: bool, json: bool) -> None:
             (bool) json - output in JSON format
         Returns: None
     '''
-    #TODO:centralize how to aquire login tokens/credentials
+    # TODO:centralize how to aquire login tokens/credentials
     credential = DefaultAzureCredential()
     client = create_storage_mgmt_client(credential, sub)
     storage_accounts = get_all_storage_accounts_in_subscription(client)

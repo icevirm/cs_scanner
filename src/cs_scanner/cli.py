@@ -32,23 +32,25 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=description)
 
     provider = parser.add_argument_group("Cloud provider")
-    provider.add_argument('provider', choices=['aws', 'gcp','az'], default='aws', help='Cloud provider')
+    provider.add_argument('provider', choices=[
+                          'aws', 'gcp', 'az'], default='aws', help='Cloud provider')
 
     services = parser.add_argument_group("Services")
     services.add_argument('service', help='Cloud service')
-    
+
     configurations = parser.add_argument_group("Configurations")
     configurations.add_argument('-e', '--encryption',
-                        action='store_true', help='Scan encryption settings')
+                                action='store_true', help='Scan encryption settings')
     configurations.add_argument('-p', '--public', action='store_true',
-                        help='Scan public access settings')
-    
+                                help='Scan public access settings')
+
     output = parser.add_argument_group("Output")
     output.add_argument('--json', action='store_true', help='Output in JSON')
 
     account = parser.add_argument_group("Account details")
-    account.add_argument('--subscription', type='string', help='Azure subscription id to scan')
-    
+    account.add_argument('--subscription',
+                         help='Azure subscription id to scan')
+
     args = parser.parse_args()
 
     if not (args.encryption or args.public):
@@ -70,11 +72,11 @@ def main() -> None:
             print(f'Supported services: {", ".join(SUPPORTED_SERVICES_GCP)}')
     elif args.provider == 'az':
         if not args.subscription:
-            print(f'Please add an Azure subscription ID that you would like to scan using --subscription.')
-            exit()
+            parser.error('--subscription is required when provider is "az"')
+
         if args.service == 'storage':
-            azure.storage_account.evaluate_storage_security(sub=args.subscription,
-                enc=args.encryption, pub=args.public, json=args.json)
+            az.storage_account.evaluate_storage_security(sub=args.subscription,
+                                                         enc=args.encryption, pub=args.public, json=args.json)
         else:
             print(f'Service {args.service} is not supported.')
             print(f'Supported services: {", ".join(SUPPORTED_SERVICES_AZ)}')

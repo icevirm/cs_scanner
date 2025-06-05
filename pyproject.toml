@@ -16,7 +16,10 @@ dependencies = [
     "boto3",
     "rich",
     "tqdm",
-    "google-cloud-storage"
+    "google-cloud-storage",
+    "azure-identity",
+    "azure-mgmt-storage",
+    "pandas"
 ]
 
 [project.scripts]
