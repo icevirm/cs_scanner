@@ -1,14 +1,36 @@
 from google.cloud import storage
-from json import dumps
+from json import dumps, loads, JSONDecodeError
+from os import getenv
 from tqdm import tqdm
+from requests import post
 from rich.console import Console
 from rich.table import Table
 
 console = Console()
 
+LLM_HOST = getenv('LLM_HOST')
 
 def get_client():
     return storage.Client()
+
+
+def ask_model(prompt):
+    response = post(
+        f'http://{LLM_HOST}/api/generate',
+        json={
+            'model': 'mistral',
+            'prompt': prompt,
+            'stream': False
+        }
+    )
+
+    output = response.json()['response']
+
+    try:
+        return loads(output)
+    except JSONDecodeError:
+        print("Failed to decode response:")
+        print(output)
 
 
 # Encryption settings
@@ -80,6 +102,29 @@ def get_public_prevention(bucket: str) -> dict:
     return False
 
 
+def evaluate_bucket_policy(bucket: str) -> dict:
+    '''
+    '''
+    policy = bucket.get_iam_policy(requested_policy_version=3)
+    policy_json = dumps(policy.to_api_repr(), indent=2)
+
+    prompt = \
+    f'''
+        Evaluate the following GCP storage bucket policy. 
+        Respond strictly in JSON with this format: 
+        {{"Policy": "Good" or "Bad", "Reason": "short explanation"}}.
+
+        Policy:
+        {dumps(policy_json, indent=2)}
+    '''
+    model_response = ask_model(prompt)
+
+    return {
+        'PolicyStatus': model_response['Policy'],
+        'PolicyReason': model_response['Reason']
+    }
+
+
 def evaluate_storage_public_access(bucket: str) -> dict:
     '''
         Output information about GCS Public Access settings
@@ -88,8 +133,11 @@ def evaluate_storage_public_access(bucket: str) -> dict:
         Returns: (dict) - status of public access settings
     '''
     bucket_object = get_bucket(bucket)
+
     return {
-        'PublicAccess': get_public_prevention(bucket_object)
+        'PublicAccess': get_public_prevention(bucket_object),
+        'PolicyStatus': evaluate_bucket_policy(bucket_object)['PolicyStatus'],
+        'PolicyReason': evaluate_bucket_policy(bucket_object)['PolicyReason']
     }
 
 
@@ -137,6 +185,10 @@ def output_json(buckets: list, enc: bool, pub: bool) -> None:
             },
             'PublicAccess': {
                 'PublicAccess': public_access.get(bucket, {}).get('PublicAccess', '')
+            },
+            'PolicyEval': {
+                'PolicyStatus': public_access.get(bucket, {}).get('PolicyStatus', ''),
+                'PolicyReason': public_access.get(bucket, {}).get('PolicyReason', '')
             }
         })
 

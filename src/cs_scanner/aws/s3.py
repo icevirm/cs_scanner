@@ -20,9 +20,10 @@ from .helpers import parse_arn
 
 s3 = boto_client('s3')
 kms = boto_client('kms')
-LLM_HOST = getenv('LLM_HOST')
 
 console = Console()
+
+LLM_HOST = getenv('LLM_HOST')
 
 
 # Chat with LLM
@@ -259,14 +260,14 @@ def evaluate_bucket_policy(bucket: str) -> dict:
     policy = loads(response['Policy'])
 
     prompt = \
-    f"""
+    f'''
         Evaluate the following AWS IAM S3 bucket policy. 
         Respond strictly in JSON with this format: 
         {{"Policy": "Good" or "Bad", "Reason": "short explanation"}}.
 
         Policy:
         {dumps(policy, indent=2)}
-    """
+    '''
     model_response = ask_model(prompt)
 
     return {
