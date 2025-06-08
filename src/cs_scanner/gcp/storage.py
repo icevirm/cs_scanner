@@ -1,53 +1,22 @@
 from google.cloud import storage
-from json import dumps, loads, JSONDecodeError
-from os import getenv
+from json import dumps
 from tqdm import tqdm
-from requests import post
-from rich.console import Console
-from rich.table import Table
 
-console = Console()
+from cs_scanner.shared import output, llm
 
-LLM_HOST = getenv('LLM_HOST')
 
-def get_client():
+def get_client() -> storage.Client:
+    '''
+        Returns GCP storage API client
+
+        Args: None
+
+        Returns: (storage.Client) - GCP client
+    '''
     return storage.Client()
 
 
-def ask_model(prompt):
-    response = post(
-        f'http://{LLM_HOST}/api/generate',
-        json={
-            'model': 'mistral',
-            'prompt': prompt,
-            'stream': False
-        }
-    )
-
-    output = response.json()['response']
-
-    try:
-        return loads(output)
-    except JSONDecodeError:
-        print("Failed to decode response:")
-        print(output)
-
-
 # Encryption settings
-def get_bucket(bucket: str) -> dict:
-    '''
-        Gets bucket configuration
-
-        Args: (str) bucket - the name of the bucket to scan
-        Returns: (dict) Bucket object
-    '''
-    try:
-        response = get_client().get_bucket(bucket)
-        return response
-    except Exception as e:
-        print(e)
-
-
 def parse_key(key: str) -> str:
     '''
         Returns the location of the encryption key
@@ -59,16 +28,15 @@ def parse_key(key: str) -> str:
     return key.split('/')[3]
 
 
-def evaluate_storage_encryption(bucket: str) -> dict:
+def evaluate_storage_encryption(bucket: dict) -> dict:
     '''
-        Gets the encryption algorithm applied to the bucket.
+        Gets the encryption algorithm applied to the bucket
 
-        Args: (str) bucket - the name of the bucket to be scanned
+        Args: (dict) bucket - GCS bucket structure
         Returns: (dict) - encryption settings for the bucket
     '''
-    bucket_object = get_bucket(bucket)
-    default_kms_key_name = bucket_object.default_kms_key_name
-    bucket_location = bucket_object.location.lower()
+    default_kms_key_name = bucket.default_kms_key_name
+    bucket_location = bucket.location.lower()
     encryption_algorithm = 'AES-256'
 
     if default_kms_key_name:
@@ -87,23 +55,14 @@ def evaluate_storage_encryption(bucket: str) -> dict:
 
 
 # Public access settings
-def get_public_prevention(bucket: str) -> dict:
+def evaluate_bucket_policy(bucket: dict) -> dict:
     '''
-        Gets the status of public access prevention of the bucket
+        Evaluates GCS bucket policy with LLM.
+        Returns general status of the policy and reasoning.
 
-        Args: (str) bucket - the name of the bucket to be scanned
-        Returns: (bool) - True if enforced
-    '''
-    bucket_iam = bucket.iam_configuration
+        Args: (dict) bucket - GCS bucket structure
 
-    if bucket_iam.public_access_prevention == "enforced":
-        return True
-
-    return False
-
-
-def evaluate_bucket_policy(bucket: str) -> dict:
-    '''
+        Returns: (dict) - dictionary with status and reason
     '''
     policy = bucket.get_iam_policy(requested_policy_version=3)
     policy_json = dumps(policy.to_api_repr(), indent=2)
@@ -117,7 +76,7 @@ def evaluate_bucket_policy(bucket: str) -> dict:
         Policy:
         {dumps(policy_json, indent=2)}
     '''
-    model_response = ask_model(prompt)
+    model_response = llm.ask_model(prompt)
 
     return {
         'PolicyStatus': model_response['Policy'],
@@ -125,19 +84,22 @@ def evaluate_bucket_policy(bucket: str) -> dict:
     }
 
 
-def evaluate_storage_public_access(bucket: str) -> dict:
+def evaluate_storage_public_access(bucket: dict) -> dict:
     '''
-        Output information about GCS Public Access settings
+        Output information about GCS Public Access settings.
+        Checks if public access prevention is set.
 
-        Args: (str) bucket - name of the bucket to be scanned
-        Returns: (dict) - status of public access settings
+        Args: (dict) bucket - GCS bucket structure
+        Returns: (dict) - status of public access prevention
     '''
-    bucket_object = get_bucket(bucket)
+    bucket_iam = bucket.iam_configuration
+    prevention = False
+
+    if bucket_iam.public_access_prevention == 'enforced':
+        prevention = True
 
     return {
-        'PublicAccess': get_public_prevention(bucket_object),
-        'PolicyStatus': evaluate_bucket_policy(bucket_object)['PolicyStatus'],
-        'PolicyReason': evaluate_bucket_policy(bucket_object)['PolicyReason']
+        'Prevention': prevention
     }
 
 
@@ -147,103 +109,9 @@ def list_buckets() -> list:
         Returns all buckets in the current account
 
         Args: None
-        Returns: (list) buckets - list of buckets in the current account
+        Returns: (list) - list of buckets in the current account
     '''
-    response = get_client().list_buckets()
-    buckets = [bucket.name for bucket in response]
-
-    return buckets
-
-
-# Output
-def output_json(buckets: list, enc: bool, pub: bool) -> None:
-    '''
-        Outputs the result in JSON, useful for automation
-
-        Args: (bool) enc - encryption module
-              (bool) pub - public access module
-
-        Returns: None
-    '''
-    bucket_encryption = {}
-    public_access = {}
-    for bucket in buckets:
-        if enc:
-            bucket_encryption[bucket] = evaluate_storage_encryption(bucket)
-        if pub:
-            public_access[bucket] = evaluate_storage_public_access(bucket)
-
-    evaluation = []
-    for bucket in buckets:
-        evaluation.append({
-            'BucketName': bucket,
-            'Encryption': {
-                'KeyLocation': bucket_encryption.get(bucket, {}).get('KeyLocation', ''),
-                'BucketLocation': bucket_encryption.get(bucket, {}).get('BucketLocation'),
-                'Algorithm': bucket_encryption.get(bucket, {}).get('Algorithm'),
-                'Key': bucket_encryption.get(bucket, {}).get('Key')
-            },
-            'PublicAccess': {
-                'PublicAccess': public_access.get(bucket, {}).get('PublicAccess', '')
-            },
-            'PolicyEval': {
-                'PolicyStatus': public_access.get(bucket, {}).get('PolicyStatus', ''),
-                'PolicyReason': public_access.get(bucket, {}).get('PolicyReason', '')
-            }
-        })
-
-    print(dumps(evaluation))
-
-
-def output_table(buckets: list, enc: bool, pub: bool) -> None:
-    '''
-        Outputs the result in table, useful for CLI and humans
-
-        Args: (bool) enc - encryption module
-              (bool) pub - public access module
-
-        Returns: None
-    '''
-    table = Table(title='GCS Buckets Security Scan Results')
-    table.add_column('Bucket Name', style='cyan', justify='left')
-    table.add_column('Bucket Location', style='magenta', justify='center')
-    table.add_column('Encryption Type', style='magenta', justify='center')
-    table.add_column('Encryption Key', style='magenta', justify='center')
-    table.add_column('Key Location', style='magenta', justify='center')
-    table.add_column('Public Access', style='green', justify='center')
-
-    bucket_encryption = {}
-    public_access = {}
-    for bucket in tqdm(buckets, desc='Scanning Buckets', unit='bucket'):
-        if enc:
-            bucket_encryption[bucket] = evaluate_storage_encryption(bucket)
-        if pub:
-            public_access[bucket] = evaluate_storage_public_access(bucket)
-
-    for bucket in buckets:
-        key_location = bucket_encryption.get(bucket, {}).get('KeyLocation', '')
-        if key_location.startswith('europe-'):
-            key_location = f'{key_location}: ✅'
-        elif enc and not key_location.startswith('eu-'):
-            key_location = '❌'
-
-        public_access_status = public_access.get(
-            bucket, {}).get('PublicAccess', '')
-        if public_access_status:
-            public_access_status = f'✅'
-        elif pub and public_access_status:
-            public_access_status = '❌'
-
-        table.add_row(
-            bucket,
-            bucket_encryption.get(bucket, {}).get('BucketLocation'),
-            bucket_encryption.get(bucket, {}).get('Algorithm'),
-            bucket_encryption.get(bucket, {}).get('Key'),
-            key_location,
-            public_access_status
-        )
-
-    console.print(table)
+    return get_client().list_buckets()
 
 
 def evaluate_storage_security(enc: bool, pub: bool, json: bool) -> None:
@@ -258,7 +126,19 @@ def evaluate_storage_security(enc: bool, pub: bool, json: bool) -> None:
     '''
     buckets = list_buckets()
 
+    bucket_security = {}
+
+    for bucket in tqdm(buckets, desc='Scanning Buckets', unit='bucket'):
+        bucket_security[bucket.name] = {'BucketName': bucket.name}
+
+        if enc:
+            bucket_security[bucket.name]['Encryption'] = evaluate_storage_encryption(bucket)
+        if pub:
+            bucket_security[bucket.name]['PublicAccess'] = evaluate_storage_public_access(bucket)
+            bucket_security[bucket.name]['PolicyEval'] = evaluate_bucket_policy(bucket)
+
     if json:
-        output_json(buckets, enc, pub)
+        output.output_json(bucket_security)
     else:
-        output_table(buckets, enc, pub)
+        title = 'GCS Buckets Security Scan Results'
+        output.output_table(bucket_security, title)

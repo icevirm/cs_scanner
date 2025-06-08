@@ -80,7 +80,7 @@ class TestGCSModule(unittest.TestCase):
         mock_get_client.return_value = mock_client
 
         result = evaluate_storage_public_access("test-bucket")
-        self.assertEqual(result, {"PublicAccess": True})
+        self.assertEqual(result["Prevention"], True)
 
     @patch("cs_scanner.gcp.storage.get_client")
     def test_list_buckets(self, mock_get_client):
