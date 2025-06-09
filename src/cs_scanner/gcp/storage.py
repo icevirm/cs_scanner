@@ -114,13 +114,14 @@ def list_buckets() -> list:
     return get_client().list_buckets()
 
 
-def evaluate_storage_security(enc: bool, pub: bool, json: bool) -> None:
+def evaluate_storage_security(enc: bool, pub: bool, noai: bool, json: bool) -> None:
     '''
         Runs different security checks on GCS buckets in the account and reports the results
 
         Args:
             (bool) enc - scan encryption settings
             (bool) pub - scan public access settings
+            (bool) noai - disable evaluation with LLM
             (bool) json - output in JSON format
         Returns: None
     '''
@@ -135,7 +136,8 @@ def evaluate_storage_security(enc: bool, pub: bool, json: bool) -> None:
             bucket_security[bucket.name]['Encryption'] = evaluate_storage_encryption(bucket)
         if pub:
             bucket_security[bucket.name]['PublicAccess'] = evaluate_storage_public_access(bucket)
-            bucket_security[bucket.name]['PolicyEval'] = evaluate_bucket_policy(bucket)
+            if not noai:
+                bucket_security[bucket.name]['PolicyEval'] = evaluate_bucket_policy(bucket)
 
     if json:
         output.output_json(bucket_security)

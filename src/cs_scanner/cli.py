@@ -43,6 +43,7 @@ def main() -> None:
                                 action='store_true', help='Scan encryption settings')
     configurations.add_argument('-p', '--public', action='store_true',
                                 help='Scan public access settings')
+    configurations.add_argument('--no-ai', action='store_true', help="Disable using AI in evaluations")
 
     output = parser.add_argument_group("Output")
     output.add_argument('--json', action='store_true', help='Output in JSON')
@@ -59,14 +60,14 @@ def main() -> None:
     if args.provider == 'aws':
         if args.service == 's3':
             aws.s3.evaluate_s3_security(enc=args.encryption,
-                                        pub=args.public, json=args.json)
+                                        pub=args.public, noai=args.no_ai, json=args.json)
         else:
             print(f'Service {args.service} is not supported.')
             print(f'Supported services: {", ".join(SUPPORTED_SERVICES_AWS)}')
     elif args.provider == 'gcp':
         if args.service == 'storage':
             gcp.storage.evaluate_storage_security(
-                enc=args.encryption, pub=args.public, json=args.json)
+                enc=args.encryption, pub=args.public, noai=args.no_ai, json=args.json)
         else:
             print(f'Service {args.service} is not supported.')
             print(f'Supported services: {", ".join(SUPPORTED_SERVICES_GCP)}')
