@@ -1,21 +1,10 @@
 import unittest
 from unittest.mock import patch, MagicMock
 
-from cs_scanner.gcp.storage import get_bucket, parse_key, evaluate_storage_encryption, get_public_prevention, evaluate_storage_public_access, list_buckets
+from cs_scanner.gcp.storage import parse_key, evaluate_storage_encryption, evaluate_storage_public_access, list_buckets
 
 
-class TestGCSModule(unittest.TestCase):
-
-    @patch("cs_scanner.gcp.storage.get_client")
-    def test_get_bucket(self, mock_get_client):
-        mock_client = MagicMock()
-        mock_bucket = MagicMock()
-        mock_client.get_bucket.return_value = mock_bucket
-        mock_get_client.return_value = mock_client
-
-        result = get_bucket("test-bucket")
-        mock_client.get_bucket.assert_called_once_with("test-bucket")
-        self.assertEqual(result, mock_bucket)
+class TestGCSModule(unittest.TestCase): 
 
     def test_parse_key(self):
         key = "projects/project-1234/locations/europe-west1/keyRings/storage-eu/cryptoKeys/buckets-eu"
@@ -32,7 +21,7 @@ class TestGCSModule(unittest.TestCase):
         mock_client.get_bucket.return_value = mock_bucket
         mock_get_client.return_value = mock_client
 
-        result = evaluate_storage_encryption("bucket-1")
+        result = evaluate_storage_encryption(mock_bucket)
         expected = {
             'BucketLocation': 'us',
             'Algorithm': 'AES-256',
@@ -51,7 +40,7 @@ class TestGCSModule(unittest.TestCase):
         mock_client.get_bucket.return_value = mock_bucket
         mock_get_client.return_value = mock_client
 
-        result = evaluate_storage_encryption("bucket-1")
+        result = evaluate_storage_encryption(mock_bucket)
         expected = {
             'BucketLocation': 'europe-west1',
             'Algorithm': 'AES-256',
@@ -59,16 +48,6 @@ class TestGCSModule(unittest.TestCase):
             'KeyLocation': 'europe-west1'
         }
         self.assertEqual(result, expected)
-
-    def test_get_public_prevention_enforced(self):
-        mock_bucket = MagicMock()
-        mock_bucket.iam_configuration.public_access_prevention = "enforced"
-        self.assertTrue(get_public_prevention(mock_bucket))
-
-    def test_get_public_prevention_not_enforced(self):
-        mock_bucket = MagicMock()
-        mock_bucket.iam_configuration.public_access_prevention = "unspecified"
-        self.assertFalse(get_public_prevention(mock_bucket))
 
     @patch("cs_scanner.gcp.storage.get_client")
     def test_evaluate_storage_public_access(self, mock_get_client):
@@ -79,7 +58,7 @@ class TestGCSModule(unittest.TestCase):
         mock_client.get_bucket.return_value = mock_bucket
         mock_get_client.return_value = mock_client
 
-        result = evaluate_storage_public_access("test-bucket")
+        result = evaluate_storage_public_access(mock_bucket)
         self.assertEqual(result["Prevention"], True)
 
     @patch("cs_scanner.gcp.storage.get_client")
@@ -94,4 +73,4 @@ class TestGCSModule(unittest.TestCase):
         mock_get_client.return_value = mock_client
 
         result = list_buckets()
-        self.assertEqual(result, ["bucket-a", "bucket-b"])
+        self.assertEqual(result, [mock_bucket_1, mock_bucket_2])
