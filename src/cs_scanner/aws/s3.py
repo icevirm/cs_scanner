@@ -9,41 +9,15 @@ from base64 import b64encode
 from boto3 import client as boto_client
 from botocore import exceptions
 from hashlib import md5
-from json import dumps, loads, JSONDecodeError
-from os import getenv
-from requests import post
-from rich.console import Console
-from rich.table import Table
+from json import dumps, loads
 from tqdm import tqdm
+
+from cs_scanner.shared import output, llm
 
 from .helpers import parse_arn
 
 s3 = boto_client('s3')
 kms = boto_client('kms')
-
-console = Console()
-
-LLM_HOST = getenv('LLM_HOST')
-
-
-# Chat with LLM
-def ask_model(prompt):
-    response = post(
-        f'http://{LLM_HOST}/api/generate',
-        json={
-            'model': 'mistral',
-            'prompt': prompt,
-            'stream': False
-        }
-    )
-
-    output = response.json()['response']
-
-    try:
-        return loads(output)
-    except JSONDecodeError:
-        print("Failed to decode response:")
-        print(output)
 
 
 # Encryption settings
@@ -268,132 +242,12 @@ def evaluate_bucket_policy(bucket: str) -> dict:
         Policy:
         {dumps(policy, indent=2)}
     '''
-    model_response = ask_model(prompt)
+    model_response = llm.ask_model(prompt)
 
     return {
         'PolicyStatus': model_response['Policy'],
         'PolicyReason': model_response['Reason']
     }
-
-
-# Output
-def output_json(buckets: list, enc: bool, pub: bool) -> None:
-    '''
-        Outputs the result in JSON, useful for automation
-
-        Args: (bool) enc - encryption module
-            (bool) pub - public access module
-
-        Returns: None
-    '''
-    bucket_encryption = {}
-    public_access = {}
-    access_policy = {}
-    for bucket in buckets:
-        if enc:
-            bucket_encryption[bucket] = evaluate_s3_encryption(bucket)
-        if pub:
-            public_access[bucket] = evaluate_s3_public_access(bucket)
-            access_policy[bucket] = evaluate_bucket_policy(bucket)
-
-    evaluation = []
-    for bucket in buckets:
-        evaluation.append({
-            'BucketName': bucket,
-            'Encryption': {
-                'KeyLocation': bucket_encryption.get(bucket, {}).get('KeyLocation', ''),
-                'TLS': bucket_encryption.get(bucket, {}).get('TLS', ''),
-                'SSE-C': bucket_encryption.get(bucket, {}).get('SSE-C', ''),
-                'BucketLocation': bucket_encryption.get(bucket, {}).get('BucketLocation'),
-                'Algorithm': bucket_encryption.get(bucket, {}).get('Algorithm'),
-                'Key': bucket_encryption.get(bucket, {}).get('Key')
-            },
-            'PublicAccess': {
-                'PublicAccess': public_access.get(bucket, {}).get('PublicAccess', ''),
-                'BucketPolicy': access_policy.get(bucket, {}).get('PolicyStatus', ''),
-                'BucketPolicyReason': access_policy.get(bucket, {}).get('PolicyReason', ''),
-            }
-        })
-
-    print(dumps(evaluation))
-
-
-def output_table(buckets: list, enc: bool, pub: bool) -> None:
-    '''
-        Outputs the result in table, useful for CLI and humans
-
-        Args: (bool) enc - encryption module
-            (bool) pub - public access module
-
-        Returns: None
-    '''
-    table = Table(title='S3 Bucket Security Scan Results')
-    table.add_column('Bucket Name', style='cyan', justify='left')
-    table.add_column('Bucket Location', style='magenta', justify='center')
-    table.add_column('Encryption Algorythm', style='magenta', justify='center')
-    table.add_column('Encryption Key', style='magenta', justify='center')
-    table.add_column('Key Location', style='magenta', justify='center')
-    table.add_column('TLS Enforced', style='green', justify='center')
-    table.add_column('SSE-C Blocked', style='green', justify='center')
-    table.add_column('Public Access', style='green', justify='center')
-    table.add_column('Bucket Policy', style='green', justify='center')
-
-    bucket_encryption = {}
-    public_access = {}
-    access_policy = {}
-    for bucket in tqdm(buckets, desc='Scanning Buckets', unit='bucket'):
-        if enc:
-            bucket_encryption[bucket] = evaluate_s3_encryption(bucket)
-        if pub:
-            public_access[bucket] = evaluate_s3_public_access(bucket)
-            access_policy[bucket] = evaluate_bucket_policy(bucket)
-
-    for bucket in buckets:
-        key_location = bucket_encryption.get(bucket, {}).get('KeyLocation', '')
-        if key_location.startswith('eu-'):
-            key_location = f'{key_location}: ✅'
-        elif enc and not key_location.startswith('eu-'):
-            key_location = '❌'
-
-        tls_status = bucket_encryption.get(bucket, {}).get('TLS', '')
-        if tls_status:
-            tls_status = '✅'
-        elif enc and not tls_status:
-            tls_status = '❌'
-
-        sse_c_status = bucket_encryption.get(bucket, {}).get('SSE-C', '')
-        if sse_c_status:
-            sse_c_status = '❌'
-        elif enc and not sse_c_status:
-            sse_c_status = '✅'
-
-        public_access_status = public_access.get(
-            bucket, {}).get('PublicAccess', '')
-        if public_access_status:
-            public_access_status = '✅'
-        elif pub and not public_access_status:
-            public_access_status = '❌'
-
-        bucket_policy_status = access_policy.get(
-                bucket, {}).get('PolicyStatus', '')
-        if bucket_policy_status == 'Bad':
-            bucket_policy_status = '❌'
-        elif bucket_policy_status == 'Good':
-            bucket_policy_status = '✅'
-
-        table.add_row(
-            bucket,
-            bucket_encryption.get(bucket, {}).get('BucketLocation'),
-            bucket_encryption.get(bucket, {}).get('Algorithm'),
-            bucket_encryption.get(bucket, {}).get('Key'),
-            key_location,
-            tls_status,
-            sse_c_status,
-            public_access_status,
-            bucket_policy_status
-        )
-
-    console.print(table)
 
 
 def evaluate_s3_security(enc: bool, pub: bool, json: bool) -> None:
@@ -408,7 +262,19 @@ def evaluate_s3_security(enc: bool, pub: bool, json: bool) -> None:
     '''
     buckets = list_buckets()
 
+    bucket_security = {}
+
+    for bucket in tqdm(buckets, desc='Scanning Buckets', unit='bucket'):
+        bucket_security[bucket] = {'BucketName': bucket}
+
+        if enc:
+            bucket_security[bucket]['Encryption'] = evaluate_s3_encryption(bucket)
+        if pub:
+            bucket_security[bucket]['PublicAccess'] = evaluate_s3_public_access(bucket)
+            bucket_security[bucket]['PolicyEval'] = evaluate_bucket_policy(bucket)
+
     if json:
-        output_json(buckets, enc, pub)
+        output.output_json(bucket_security)
     else:
-        output_table(buckets, enc, pub)
+        title = 'S3 Buckets Security Scan Results'
+        output.output_table(bucket_security, title)

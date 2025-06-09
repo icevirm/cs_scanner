@@ -34,7 +34,7 @@ def output_table(config: dict, title: str) -> None:
     columns = sorted({key for d in flattened for key in d.keys() if key != 'PolicyEval.PolicyReason'})
 
     for col in columns:
-        table.add_column(col, header_style='magenta', style='cyan', justify='center')
+        table.add_column(col, header_style='cyan', justify='center')
 
     for row in flattened:
         table.add_row(*(str(row.get(col, '')) for col in columns))

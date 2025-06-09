@@ -4,7 +4,7 @@ from json import dumps
 from moto import mock_aws
 from unittest.mock import patch, MagicMock
 
-from cs_scanner.aws.s3 import get_bucket_encryption, check_sse_c_allowed, check_tls_enforced, get_bucket_location, get_key_location, get_bucket_public_configuration, ask_model, evaluate_bucket_policy
+from cs_scanner.aws.s3 import get_bucket_encryption, check_sse_c_allowed, check_tls_enforced, get_bucket_location, get_key_location, get_bucket_public_configuration, evaluate_bucket_policy
 
 DEFAULT_REGION = 'eu-central-1'
 s3 = client('s3')
@@ -175,31 +175,8 @@ def test_get_bucket_public_configuration():
     assert result == True
 
 
-@patch('cs_scanner.aws.s3.post')
-def test_ask_model_valid_json_response(mock_post):
-    mock_response = MagicMock()
-    mock_response.json.return_value = {'response': dumps({'Policy': 'Good', 'Reason': 'All good'})}
-    mock_post.return_value = mock_response
-
-    result = ask_model('Some prompt')
-    assert result == {'Policy': 'Good', 'Reason': 'All good'}
-
-
-@patch('cs_scanner.aws.s3.post')
-def test_ask_model_invalid_json_response(mock_post, capsys):
-    mock_response = MagicMock()
-    mock_response.json.return_value = {'response': 'Not a JSON string'}
-    mock_post.return_value = mock_response
-
-    result = ask_model('Some prompt')
-    assert result is None
-
-    captured = capsys.readouterr()
-    assert 'Failed to decode response' in captured.out
-    assert 'Not a JSON string' in captured.out
-
 @mock_aws
-@patch('cs_scanner.aws.s3.ask_model')
+@patch('cs_scanner.shared.llm.ask_model')
 def test_evaluate_bucket_policy(mock_ask_model):
     s3 = client('s3', region_name='eu-central-1')
     bucket_name = 'example-bucket'
