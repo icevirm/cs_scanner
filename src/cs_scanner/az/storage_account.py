@@ -2,11 +2,11 @@
     This modules scans configuration settings of Azure Storage Accounts
     in the given subscription.
 '''
-
 from azure.identity import DefaultAzureCredential
 from azure.mgmt.storage import StorageManagementClient
-from json import dumps
-import pandas as pd
+from tqdm import tqdm
+
+from cs_scanner.shared import output, llm
 
 
 def create_storage_mgmt_client(credential, subscription_id):
@@ -73,68 +73,14 @@ def check_public_access(storage_account) -> dict:
     return public_status
 
 
-def evaluate(storage_accounts: list, enc: bool, pub: bool) -> list:
-    '''
-        Function that takes list of all storage accounts and goes through all
-        individual check functions for different settings.
-
-        Args: (list) storage_accounts - list of StorageAccount objects from Azure SDK
-              (bool) enc - encryption module
-              (bool) pub - public access module
-
-        Returns: (list)evaluations - status of all executed checks
-    '''
-    evaluations = []
-    for storage in storage_accounts:
-
-        storage_account_evaluation = {
-            'StorageAccountName': storage.name,
-            'Encryption': {},
-            'PublicAccess': {}
-        }
-
-        if enc:
-            storage_account_evaluation['Encryption'] = check_encryption(
-                storage)
-        if pub:
-            storage_account_evaluation['PublicAccess'] = check_public_access(
-                storage)
-
-        evaluations.append(storage_account_evaluation)
-
-    return evaluations
-
-# Output
-def output_json(evaluations: list) -> None:
-    '''
-        Outputs the result in JSON, useful for automation
-
-        Args: (list) evaluations - outcome of evaluations function
-        Returns: None
-    '''
-    print(dumps(evaluations))
-
-
-def output_table(evaluations: list) -> None:
-    '''
-        Outputs the result in a Pandas Dataframe, which looks like a table
-
-        Args: (list) evaluations - outcome of evaluations function
-        Returns: None
-    '''
-    pd.set_option('display.max_columns', None)
-    table = pd.json_normalize(evaluations).melt(var_name='Setting')
-    print(table)
-
-
-# def evaluate_storage_security(sub, enc: bool, pub: bool, json: bool) -> None:
-def evaluate_storage_security(sub, enc: bool, pub: bool, json: bool) -> None:
+def evaluate_storage_security(sub, enc: bool, pub: bool, noai: bool, json: bool) -> None:
     '''
         Runs different security checks on Azure Storage accounts in the subscription and reports the results
 
         Args:
             (bool) enc - scan encryption settings
             (bool) pub - scan public access settings
+            (bool) noai - disable evaluation with LLM
             (bool) json - output in JSON format
         Returns: None
     '''
@@ -142,9 +88,21 @@ def evaluate_storage_security(sub, enc: bool, pub: bool, json: bool) -> None:
     credential = DefaultAzureCredential()
     client = create_storage_mgmt_client(credential, sub)
     storage_accounts = get_all_storage_accounts_in_subscription(client)
-    evaluations = evaluate(storage_accounts, enc, pub)
+    
+    storage_account_security = {}
+
+    for storage in tqdm(storage_accounts, desc='Scanning Storage Accounts', unit='storage'):
+        storage_account_security[storage.name] = {'StorageAccountName': storage.name}
+
+        if enc:
+            storage_account_security[storage.name]['Encryption'] = check_encryption(storage)
+        if pub:
+            storage_account_security[storage.name]['PublicAccess'] = check_public_access(storage)
+            if not noai:
+                pass
 
     if json:
-        output_json(evaluations)
+        output.output_json(storage_account_security)
     else:
-        output_table(evaluations)
+        title = 'Azure Storage Accounts Security Scan Results'
+        output.output_table(storage_account_security, title)

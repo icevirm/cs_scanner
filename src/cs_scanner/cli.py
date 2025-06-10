@@ -77,7 +77,9 @@ def main() -> None:
 
         if args.service == 'storage':
             az.storage_account.evaluate_storage_security(sub=args.subscription,
-                                                         enc=args.encryption, pub=args.public, json=args.json)
+                                                         enc=args.encryption, pub=args.public,
+                                                         noai=args.no_ai,
+                                                         json=args.json)
         else:
             print(f'Service {args.service} is not supported.')
             print(f'Supported services: {", ".join(SUPPORTED_SERVICES_AZ)}')
